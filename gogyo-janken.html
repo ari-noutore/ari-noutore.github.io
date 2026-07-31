@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五行じゃんけん</title>
+<style>
+  :root{
+    --paper:#F5F1E6;
+    --ink:#2b2b2b;
+    --line:#d9cfb8;
+    --moku:#2E7D46;   /* 木 */
+    --ka:#D0433A;     /* 火 */
+    --do:#C8912B;     /* 土 */
+    --kin:#8A9199;    /* 金 */
+    --sui:#2A4B7C;    /* 水 */
+    --sei:#2E7D46;    /* 相生の線 */
+    --koku:#C0392B;   /* 相剋の線 */
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Hiragino Kaku Gothic ProN','Yu Gothic',Meiryo,sans-serif;
+    font-size:18px;
+    line-height:1.7;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:16px 14px 40px;}
+  header{text-align:center;padding:6px 0 10px;}
+  header h1{
+    margin:0;font-size:30px;letter-spacing:.08em;font-weight:800;
+  }
+  header .sub{margin:4px 0 0;font-size:16px;color:#6b6252;}
+
+  /* タブ */
+  .tabs{display:flex;gap:8px;margin:14px 0 18px;}
+  .tab{
+    flex:1;border:2px solid var(--line);background:#fff;color:#5a5142;
+    font-size:19px;font-weight:700;padding:12px 4px;border-radius:12px;
+    cursor:pointer;min-height:56px;
+  }
+  .tab[aria-selected="true"]{
+    background:#3a352b;color:#fff;border-color:#3a352b;
+  }
+  .tab:focus-visible{outline:3px solid #3a352b;outline-offset:2px;}
+
+  .panel{display:none;}
+  .panel.on{display:block;}
+
+  /* スコア */
+  .score{
+    display:flex;justify-content:center;gap:0;
+    border:2px solid var(--line);border-radius:14px;overflow:hidden;
+    background:#fff;margin-bottom:16px;
+  }
+  .score div{flex:1;text-align:center;padding:8px 4px;}
+  .score div+div{border-left:2px solid var(--line);}
+  .score .n{font-size:26px;font-weight:800;line-height:1.2;}
+  .score .l{font-size:14px;color:#6b6252;}
+
+  .prompt{text-align:center;font-size:20px;font-weight:700;margin:6px 0 12px;}
+
+  /* 手のボタン */
+  .hands{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+  }
+  @media(max-width:480px){
+    .hands{grid-template-columns:repeat(5,1fr);gap:6px;}
+  }
+  .hand{
+    border:3px solid #fff;border-radius:16px;background:#fff;
+    padding:12px 2px 10px;cursor:pointer;min-height:104px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    box-shadow:0 2px 0 rgba(0,0,0,.06);
+  }
+  .hand:focus-visible{outline:3px solid #3a352b;outline-offset:2px;}
+  .hand .dot{
+    width:52px;height:52px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:30px;font-weight:800;
+  }
+  @media(max-width:420px){
+    .hand{min-height:92px;}
+    .hand .dot{width:44px;height:44px;font-size:26px;}
+  }
+  .hand .yomi{font-size:14px;color:#6b6252;line-height:1;}
+  .hand.moku{border-color:var(--moku);} .dot.moku{background:var(--moku);}
+  .hand.ka{border-color:var(--ka);}     .dot.ka{background:var(--ka);}
+  .hand.do{border-color:var(--do);}     .dot.do{background:var(--do);}
+  .hand.kin{border-color:var(--kin);}   .dot.kin{background:var(--kin);}
+  .hand.sui{border-color:var(--sui);}   .dot.sui{background:var(--sui);}
+
+  /* 結果 */
+  .result{
+    margin-top:18px;border:2px solid var(--line);border-radius:16px;
+    background:#fff;padding:16px 14px;text-align:center;
+  }
+  .result.hide{display:none;}
+  .verdict{font-size:30px;font-weight:800;margin:2px 0 12px;}
+  .verdict.win{color:var(--moku);}
+  .verdict.lose{color:#6b6252;}
+  .verdict.draw{color:var(--do);}
+
+  .versus{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    margin:6px 0 12px;flex-wrap:wrap;
+  }
+  .chip{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:78px;}
+  .chip .who{font-size:14px;color:#6b6252;}
+  .chip .dot{
+    width:56px;height:56px;border-radius:50%;color:#fff;font-size:32px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .rel{
+    font-size:15px;font-weight:800;color:#fff;border-radius:20px;
+    padding:6px 12px;white-space:nowrap;
+  }
+  .rel.koku{background:var(--koku);}
+  .rel.sei{background:var(--sei);}
+
+  .reason{font-size:19px;font-weight:700;margin:4px 0 2px;}
+  .reason .big{font-size:21px;}
+
+  /* えらんだ手と関係マップ */
+  .chosen{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:4px;}
+  .chosen .who{font-size:16px;color:#6b6252;}
+  .dot.big{width:84px;height:84px;font-size:46px;}
+  .reveal{margin-top:4px;text-align:left;}
+  .ghead{
+    display:flex;align-items:center;gap:8px;
+    font-size:16px;font-weight:800;color:#3a352b;margin:14px 0 2px;
+  }
+  .ghead .swatch{width:22px;height:5px;border-radius:3px;}
+  .rrow{display:flex;align-items:center;gap:9px;padding:10px 0;border-top:1px solid #eee5d2;}
+  .rbadge{
+    font-size:14px;font-weight:800;color:#fff;border-radius:11px;
+    padding:5px 0;width:76px;text-align:center;flex:0 0 auto;
+  }
+  .rbadge.koku{background:var(--koku);}
+  .rbadge.sei{background:var(--sei);}
+  .rsay{flex:1;font-size:16px;color:#3a352b;line-height:1.5;}
+
+  .again{
+    margin-top:16px;border:none;border-radius:12px;background:#3a352b;color:#fff;
+    font-size:20px;font-weight:700;padding:14px 24px;cursor:pointer;min-height:56px;width:100%;
+  }
+  .again:focus-visible{outline:3px solid #C8912B;outline-offset:2px;}
+
+  /* かんけいタブ */
+  .card{
+    border:2px solid var(--line);border-radius:16px;background:#fff;
+    padding:14px 14px 10px;margin-bottom:16px;
+  }
+  .card h2{margin:0 0 4px;font-size:20px;}
+  .card h2 .tag{font-size:14px;font-weight:700;color:#fff;border-radius:12px;padding:2px 10px;margin-left:6px;vertical-align:middle;}
+  .tag.sei{background:var(--sei);}
+  .tag.koku{background:var(--koku);}
+  .card p.lead{margin:2px 0 10px;font-size:16px;color:#5a5142;}
+  ul.rel-list{list-style:none;margin:0;padding:0;}
+  ul.rel-list li{
+    display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #eee5d2;font-size:18px;
+  }
+  ul.rel-list li:first-child{border-top:none;}
+  .mini{
+    width:34px;height:34px;border-radius:50%;color:#fff;font-size:20px;font-weight:800;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .mini.moku{background:var(--moku);} .mini.ka{background:var(--ka);}
+  .mini.do{background:var(--do);} .mini.kin{background:var(--kin);} .mini.sui{background:var(--sui);}
+  .arrow{font-size:20px;color:#9a8f78;flex:0 0 auto;}
+  .say{flex:1;font-size:16px;color:#3a352b;}
+
+  /* 勝ち負け表 */
+  ul.rel-list li.wl{align-items:flex-start;gap:10px;padding:11px 0;}
+  .wl-body{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;}
+  .wl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .mini.sm{width:30px;height:30px;font-size:17px;}
+  .wtag{
+    font-size:14px;font-weight:800;color:#fff;border-radius:10px;
+    padding:3px 0;flex:0 0 auto;width:52px;text-align:center;
+  }
+  .wtag.win{background:var(--sei);}
+  .wtag.lose{background:var(--kin);}
+  .wl-say{flex:1;font-size:15px;color:#5a5142;min-width:150px;}
+
+  svg{display:block;width:100%;height:auto;margin:4px auto 8px;max-width:360px;}
+  .legend{display:flex;justify-content:center;gap:16px;font-size:15px;margin-bottom:4px;flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:22px;height:4px;border-radius:2px;display:inline-block;}
+  .swatch.sei{background:var(--sei);}
+  .swatch.koku{background:var(--koku);}
+
+  @media (prefers-reduced-motion: no-preference){
+    .result:not(.hide){animation:pop .28s ease;}
+    @keyframes pop{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+    .reveal .anim{opacity:0;transform:translateY(10px);animation:rIn .42s ease forwards;animation-delay:calc(var(--i) * .26s);}
+    @keyframes rIn{to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>五行（ごぎょう）じゃんけん</h1>
+    <p class="sub">手を出すと、その手の関係が見えてくる</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-play" aria-selected="true" aria-controls="play">てを出す</button>
+    <button class="tab" role="tab" id="tab-learn" aria-selected="false" aria-controls="learn">かんけい</button>
+  </div>
+
+  <!-- ===== てを出す ===== -->
+  <section class="panel on" id="play" role="tabpanel" aria-labelledby="tab-play">
+    <p class="prompt">手を1つ えらんでください</p>
+    <div class="hands" id="hands"></div>
+
+    <div class="result hide" id="result" aria-live="polite">
+      <div class="chosen">
+        <span class="who">あなたが出したのは</span>
+        <span class="dot big" id="chosenDot"></span>
+      </div>
+      <div class="reveal" id="reveal"></div>
+      <button class="again" id="again">ほかの手を見る</button>
+    </div>
+  </section>
+
+  <!-- ===== かんけい ===== -->
+  <section class="panel" id="learn" role="tabpanel" aria-labelledby="tab-learn" hidden>
+    <div class="card">
+      <h2>五行のわ</h2>
+      <div class="legend">
+        <span><i class="swatch sei"></i>相生（そだてる）</span>
+        <span><i class="swatch koku"></i>相剋（つよい・よわい）</span>
+      </div>
+      <svg id="star" viewBox="0 0 360 360" role="img" aria-label="五行の相生・相剋の図"></svg>
+    </div>
+
+    <div class="card">
+      <h2>そだてる<span class="tag sei">相生</span></h2>
+      <p class="lead">となりを生み出す、なかよしの関係。じゃんけんでは「あいこ」になります。</p>
+      <ul class="rel-list" id="seiList"></ul>
+    </div>
+
+    <div class="card">
+      <h2>勝ち負け表<span class="tag koku">相剋</span></h2>
+      <p class="lead">それぞれの手が、何に勝って、何に負けるか。じゃんけんの勝ち負けは、これで決まります。</p>
+      <ul class="rel-list" id="kokuList"></ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // 五行データ（相生の順にならべる：木→火→土→金→水）
+  var E = {
+    moku:{k:"木", y:"もく"},
+    ka:  {k:"火", y:"か"},
+    do:  {k:"土", y:"ど"},
+    kin: {k:"金", y:"きん"},
+    sui: {k:"水", y:"すい"}
+  };
+  var ORDER = ["moku","ka","do","kin","sui"];
+
+  // 相生：a が b をそだてる
+  var SEI = {moku:"ka", ka:"do", do:"kin", kin:"sui", sui:"moku"};
+  var SEI_SAY = {
+    moku:"木はもえて 火を生む",
+    ka:  "火は灰になって 土を生む",
+    do:  "土の中から 金（きんぞく）が生まれる",
+    kin: "金ぞくはひえて 水（つゆ）を生む",
+    sui: "水は 木をそだてる"
+  };
+  // 相剋：a が b をおさえる（勝つ）
+  var KOKU = {moku:"do", do:"sui", sui:"ka", ka:"kin", kin:"moku"};
+  var KOKU_SAY = {
+    moku:"木は 土の養分をすう",
+    do:  "土は 水をせきとめる",
+    sui: "水は 火をけす",
+    ka:  "火は 金ぞくをとかす",
+    kin: "金（おの）は 木をきる"
+  };
+
+  function dot(cls, kanji){
+    return '<span class="'+cls+'">'+kanji+'</span>';
+  }
+
+  // ---- 手ボタンを作る ----
+  var handsEl = document.getElementById("hands");
+  ORDER.forEach(function(id){
+    var b = document.createElement("button");
+    b.className = "hand "+id;
+    b.setAttribute("aria-label", E[id].k+"（"+E[id].y+"）をえらぶ");
+    b.innerHTML = '<span class="dot '+id+'">'+E[id].k+'</span><span class="yomi">'+E[id].y+'</span>';
+    b.addEventListener("click", function(){ explore(id); });
+    handsEl.appendChild(b);
+  });
+
+  // 負ける相手（id をおさえる手）と、生まれるもと（id を生む手）
+  var LOSE = {}, BORN = {};
+  ORDER.forEach(function(id){ LOSE[KOKU[id]] = id; BORN[SEI[id]] = id; });
+
+  var resultEl = document.getElementById("result");
+  var chosenDot = document.getElementById("chosenDot");
+  var revealEl = document.getElementById("reveal");
+
+  function mini(id){ return '<span class="mini '+id+'">'+E[id].k+'</span>'; }
+
+  function explore(you){
+    chosenDot.className = "dot big "+you;
+    chosenDot.textContent = E[you].k;
+
+    var lose = LOSE[you];    // この手が負ける相手
+    var win  = KOKU[you];    // この手が勝つ相手
+    var child= SEI[you];     // この手が生み出す相手
+    var parent= BORN[you];   // この手を生み出す相手
+
+    var items = [
+      {head:"相剋（つよい・よわい）", type:"koku"},
+      {type:"koku", badge:"負ける", tgt:lose,  say:KOKU_SAY[lose]},
+      {type:"koku", badge:"勝つ",   tgt:win,   say:KOKU_SAY[you]},
+      {head:"相生（そだてる）", type:"sei"},
+      {type:"sei",  badge:"生む",   tgt:child, say:SEI_SAY[you]},
+      {type:"sei",  badge:"生まれる", tgt:parent, say:SEI_SAY[parent]}
+    ];
+
+    var html = "";
+    items.forEach(function(r, i){
+      if(r.head){
+        html += '<div class="ghead anim '+r.type+'" style="--i:'+i+'">'+
+                '<span class="swatch '+r.type+'"></span>'+r.head+'</div>';
+      } else {
+        html += '<div class="rrow anim" style="--i:'+i+'">'+
+                '<span class="rbadge '+r.type+'">'+r.badge+'</span>'+
+                mini(r.tgt)+
+                '<span class="rsay">'+r.say+'</span></div>';
+      }
+    });
+    revealEl.innerHTML = html;
+
+    resultEl.classList.remove("hide");
+    document.getElementById("again").focus();
+  }
+
+  document.getElementById("again").addEventListener("click", function(){
+    resultEl.classList.add("hide");
+    handsEl.scrollIntoView({behavior:"smooth", block:"center"});
+    handsEl.querySelector(".hand").focus();
+  });
+
+  // ---- かんけいリスト ----
+  var seiList = document.getElementById("seiList");
+  var kokuList = document.getElementById("kokuList");
+  ORDER.forEach(function(id){
+    var b = SEI[id];
+    var li = document.createElement("li");
+    li.innerHTML =
+      '<span class="mini '+id+'">'+E[id].k+'</span>'+
+      '<span class="arrow">→</span>'+
+      '<span class="mini '+b+'">'+E[b].k+'</span>'+
+      '<span class="say">'+SEI_SAY[id]+'</span>';
+    seiList.appendChild(li);
+  });
+  // 負ける相手（id をおさえてくる手）
+  var LOSE = {};
+  ORDER.forEach(function(id){ LOSE[KOKU[id]] = id; });
+  ORDER.forEach(function(id){
+    var w = KOKU[id];   // この手が勝つ相手
+    var l = LOSE[id];   // この手が負ける相手
+    var li = document.createElement("li");
+    li.className = "wl";
+    li.innerHTML =
+      '<span class="mini '+id+'">'+E[id].k+'</span>'+
+      '<div class="wl-body">'+
+        '<div class="wl-row">'+
+          '<span class="wtag win">勝つ</span>'+
+          '<span class="mini sm '+w+'">'+E[w].k+'</span>'+
+          '<span class="wl-say">'+KOKU_SAY[id]+'</span>'+
+        '</div>'+
+        '<div class="wl-row">'+
+          '<span class="wtag lose">負ける</span>'+
+          '<span class="mini sm '+l+'">'+E[l].k+'</span>'+
+          '<span class="wl-say">'+KOKU_SAY[l]+'</span>'+
+        '</div>'+
+      '</div>';
+    kokuList.appendChild(li);
+  });
+
+  // ---- 五角形の図（SVG） ----
+  (function buildStar(){
+    var cx=180, cy=186, R=118, r=34;
+    var colors={moku:"#2E7D46",ka:"#D0433A",do:"#C8912B",kin:"#8A9199",sui:"#2A4B7C"};
+    var angles={}; // 木を上に、時計回りに 木火土金水
+    var start=-90;
+    ORDER.forEach(function(id,i){ angles[id]=start + i*72; });
+    function pt(id, rad){
+      var a=angles[id]*Math.PI/180;
+      return [cx+rad*Math.cos(a), cy+rad*Math.sin(a)];
+    }
+    var svg=document.getElementById("star");
+    var ns="http://www.w3.org/2000/svg";
+    function line(x1,y1,x2,y2,color,w){
+      var l=document.createElementNS(ns,"line");
+      l.setAttribute("x1",x1);l.setAttribute("y1",y1);
+      l.setAttribute("x2",x2);l.setAttribute("y2",y2);
+      l.setAttribute("stroke",color);l.setAttribute("stroke-width",w);
+      l.setAttribute("stroke-linecap","round");
+      l.setAttribute("marker-end", color==="#2E7D46"?"url(#aSei)":"url(#aKoku)");
+      svg.appendChild(l);
+    }
+    // markers
+    var defs=document.createElementNS(ns,"defs");
+    defs.innerHTML =
+      '<marker id="aSei" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">'+
+        '<path d="M0,0 L9,4.5 L0,9 z" fill="#2E7D46"/></marker>'+
+      '<marker id="aKoku" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">'+
+        '<path d="M0,0 L9,4.5 L0,9 z" fill="#C0392B"/></marker>';
+    svg.appendChild(defs);
+
+    function shorten(p1,p2,gap){
+      var dx=p2[0]-p1[0], dy=p2[1]-p1[1], d=Math.sqrt(dx*dx+dy*dy);
+      return [p1[0]+dx/d*gap, p1[1]+dy/d*gap, p2[0]-dx/d*gap, p2[1]-dy/d*gap];
+    }
+    // 相剋（内側の星・赤）
+    ORDER.forEach(function(id){
+      var b=KOKU[id];
+      var s=shorten(pt(id,R),pt(b,R),r+8);
+      line(s[0],s[1],s[2],s[3],"#C0392B",2.4);
+    });
+    // 相生（外まわり・緑）
+    ORDER.forEach(function(id){
+      var b=SEI[id];
+      var a1=angles[id]*Math.PI/180, a2=angles[b]*Math.PI/180;
+      var Ro=R+2;
+      var p1=[cx+Ro*Math.cos(a1),cy+Ro*Math.sin(a1)];
+      var p2=[cx+Ro*Math.cos(a2),cy+Ro*Math.sin(a2)];
+      var s=shorten(p1,p2,r+10);
+      line(s[0],s[1],s[2],s[3],"#2E7D46",2.8);
+    });
+    // ノード
+    ORDER.forEach(function(id){
+      var p=pt(id,R);
+      var c=document.createElementNS(ns,"circle");
+      c.setAttribute("cx",p[0]);c.setAttribute("cy",p[1]);c.setAttribute("r",r);
+      c.setAttribute("fill",colors[id]);c.setAttribute("stroke","#fff");c.setAttribute("stroke-width","3");
+      svg.appendChild(c);
+      var t=document.createElementNS(ns,"text");
+      t.setAttribute("x",p[0]);t.setAttribute("y",p[1]+11);
+      t.setAttribute("text-anchor","middle");t.setAttribute("fill","#fff");
+      t.setAttribute("font-size","30");t.setAttribute("font-weight","800");
+      t.textContent=E[id].k;
+      svg.appendChild(t);
+    });
+  })();
+
+  // ---- タブ切り替え ----
+  var tabPlay=document.getElementById("tab-play");
+  var tabLearn=document.getElementById("tab-learn");
+  var pPlay=document.getElementById("play");
+  var pLearn=document.getElementById("learn");
+  function select(which){
+    var play = which==="play";
+    tabPlay.setAttribute("aria-selected", play?"true":"false");
+    tabLearn.setAttribute("aria-selected", play?"false":"true");
+    pPlay.classList.toggle("on", play);
+    pLearn.classList.toggle("on", !play);
+    pPlay.hidden = !play;
+    pLearn.hidden = play;
+  }
+  tabPlay.addEventListener("click", function(){ select("play"); });
+  tabLearn.addEventListener("click", function(){ select("learn"); });
+})();
+</script>
+</body>
+</html>

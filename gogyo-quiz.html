@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五行クイズ｜力だめし</title>
+<style>
+  :root{
+    --paper:#F5F1E6; --ink:#2b2b2b; --line:#d9cfb8;
+    --moku:#2E7D46; --ka:#D0433A; --do:#C8912B; --kin:#8A9199; --sui:#2A4B7C;
+    --sei:#2E7D46; --koku:#C0392B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'Hiragino Kaku Gothic ProN','Yu Gothic',Meiryo,sans-serif;
+    font-size:18px; line-height:1.7; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:16px 14px 40px;}
+  header{text-align:center;padding:6px 0 8px;}
+  header h1{margin:0;font-size:30px;letter-spacing:.06em;font-weight:800;}
+  header .sub{margin:4px 0 0;font-size:16px;color:#6b6252;}
+
+  /* 出題はんい */
+  .scope{display:flex;gap:8px;margin:14px 0 12px;}
+  .scope button{
+    flex:1;border:2px solid var(--line);background:#fff;color:#5a5142;
+    font-size:17px;font-weight:700;padding:10px 4px;border-radius:12px;cursor:pointer;min-height:52px;
+  }
+  .scope button[aria-pressed="true"]{background:#3a352b;color:#fff;border-color:#3a352b;}
+  .scope button:focus-visible{outline:3px solid #3a352b;outline-offset:2px;}
+
+  /* スコア */
+  .score{
+    display:flex;justify-content:center;align-items:baseline;gap:6px;
+    border:2px solid var(--line);border-radius:14px;background:#fff;
+    padding:8px 10px;margin-bottom:16px;font-weight:700;
+  }
+  .score .big{font-size:26px;color:var(--sei);font-weight:800;}
+  .score .l{font-size:16px;color:#6b6252;}
+  .score .reset{
+    margin-left:auto;border:2px solid var(--line);background:#fff;color:#6b6252;
+    font-size:14px;font-weight:700;border-radius:10px;padding:6px 12px;cursor:pointer;min-height:40px;
+  }
+  .score .reset:focus-visible{outline:3px solid #3a352b;outline-offset:2px;}
+
+  /* 出題カード */
+  .q{
+    border:2px solid var(--line);border-radius:16px;background:#fff;
+    padding:16px 14px;text-align:center;margin-bottom:14px;
+  }
+  .q .who{font-size:16px;color:#6b6252;margin:0 0 6px;}
+  .dot{
+    width:88px;height:88px;border-radius:50%;color:#fff;font-size:48px;font-weight:800;
+    display:inline-flex;align-items:center;justify-content:center;margin:0 auto;
+  }
+  .dot.moku{background:var(--moku);} .dot.ka{background:var(--ka);}
+  .dot.do{background:var(--do);} .dot.kin{background:var(--kin);} .dot.sui{background:var(--sui);}
+  .instr{font-size:24px;font-weight:700;margin:12px 0 2px;line-height:1.5;}
+  .instr .key{font-size:30px;font-weight:800;padding:0 4px;}
+  .instr .key.koku{color:var(--koku);}
+  .instr .key.sei{color:var(--sei);}
+  .instr .hint{display:block;font-size:15px;color:#6b6252;font-weight:400;margin-top:2px;}
+
+  /* 手ボタン */
+  .prompt{text-align:center;font-size:18px;font-weight:700;margin:2px 0 10px;color:#5a5142;}
+  .hands{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+  @media(max-width:480px){.hands{gap:6px;}}
+  .hand{
+    border:3px solid #fff;border-radius:16px;background:#fff;padding:12px 2px 10px;cursor:pointer;
+    min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    box-shadow:0 2px 0 rgba(0,0,0,.06);position:relative;
+  }
+  .hand:focus-visible{outline:3px solid #3a352b;outline-offset:2px;}
+  .hand .hdot{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;font-weight:800;}
+  @media(max-width:420px){.hand{min-height:92px;} .hand .hdot{width:44px;height:44px;font-size:26px;}}
+  .hand .yomi{font-size:14px;color:#6b6252;line-height:1;}
+  .hand.moku{border-color:var(--moku);} .hdot.moku{background:var(--moku);}
+  .hand.ka{border-color:var(--ka);}     .hdot.ka{background:var(--ka);}
+  .hand.do{border-color:var(--do);}     .hdot.do{background:var(--do);}
+  .hand.kin{border-color:var(--kin);}   .hdot.kin{background:var(--kin);}
+  .hand.sui{border-color:var(--sui);}   .hdot.sui{background:var(--sui);}
+  .hand[disabled]{cursor:default;opacity:.55;}
+  .hand.correct{border-color:var(--sei);box-shadow:0 0 0 3px var(--sei);opacity:1;}
+  .hand.correct::after{content:"○";position:absolute;top:2px;right:8px;color:var(--sei);font-size:26px;font-weight:800;}
+  .hand.wrong{border-color:var(--koku);box-shadow:0 0 0 3px var(--koku);opacity:1;}
+  .hand.wrong::after{content:"×";position:absolute;top:2px;right:8px;color:var(--koku);font-size:26px;font-weight:800;}
+
+  /* こたえあわせ */
+  .feedback{
+    margin-top:14px;border:2px solid var(--line);border-radius:16px;background:#fff;
+    padding:16px 14px;text-align:center;
+  }
+  .feedback.hide{display:none;}
+  .mark{font-size:30px;font-weight:800;margin:0 0 8px;}
+  .mark.ok{color:var(--sei);}
+  .mark.ng{color:var(--koku);}
+  .say{font-size:19px;font-weight:700;margin:2px 0 0;}
+  .say .em{font-size:21px;}
+  .next{
+    margin-top:14px;border:none;border-radius:12px;background:#3a352b;color:#fff;
+    font-size:20px;font-weight:700;padding:14px 24px;cursor:pointer;min-height:56px;width:100%;
+  }
+  .next:focus-visible{outline:3px solid var(--do);outline-offset:2px;}
+
+  @media (prefers-reduced-motion: no-preference){
+    .feedback:not(.hide){animation:pop .26s ease;}
+    @keyframes pop{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>五行クイズ　力だめし</h1>
+    <p class="sub">指示どおりの手を えらべるかな？</p>
+  </header>
+
+  <div class="scope" role="group" aria-label="出題のはんい">
+    <button id="sc-koku" aria-pressed="false">相剋<br>（勝ち負け）</button>
+    <button id="sc-sei"  aria-pressed="false">相生<br>（親子）</button>
+    <button id="sc-all"  aria-pressed="true">ぜんぶ</button>
+  </div>
+
+  <div class="score">
+    <span class="l">せいかい</span>
+    <span class="big" id="sCorrect">0</span>
+    <span class="l">／ <span id="sTotal">0</span> もん</span>
+    <button class="reset" id="reset">さいしょから</button>
+  </div>
+
+  <div class="q">
+    <p class="who">ゲームが出した手</p>
+    <span class="dot" id="gameDot"></span>
+    <p class="instr" id="instr"></p>
+  </div>
+
+  <p class="prompt">こたえの手を えらんでください</p>
+  <div class="hands" id="hands"></div>
+
+  <div class="feedback hide" id="feedback" aria-live="polite">
+    <p class="mark" id="mark"></p>
+    <p class="say" id="say"></p>
+    <button class="next" id="next">つぎの問題</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var E = {moku:{k:"木",y:"もく"}, ka:{k:"火",y:"か"}, do:{k:"土",y:"ど"}, kin:{k:"金",y:"きん"}, sui:{k:"水",y:"すい"}};
+  var ORDER = ["moku","ka","do","kin","sui"];
+
+  var SEI  = {moku:"ka", ka:"do", do:"kin", kin:"sui", sui:"moku"};   // a が生む(子)
+  var KOKU = {moku:"do", do:"sui", sui:"ka", ka:"kin", kin:"moku"};   // a が勝つ(おさえる)
+  var SEI_SAY = {
+    moku:"木はもえて 火を生む",
+    ka:"火は灰になって 土を生む",
+    do:"土の中から 金（きんぞく）が生まれる",
+    kin:"金ぞくはひえて 水（つゆ）を生む",
+    sui:"水は 木をそだてる"
+  };
+  var KOKU_SAY = {
+    moku:"木は 土の養分をすう",
+    do:"土は 水をせきとめる",
+    sui:"水は 火をけす",
+    ka:"火は 金ぞくをとかす",
+    kin:"金（おの）は 木をきる"
+  };
+  var LOSE = {}, BORN = {};
+  ORDER.forEach(function(id){ LOSE[KOKU[id]] = id; BORN[SEI[id]] = id; });
+
+  // 問題タイプ：S を見せて、指示に合う手を答えさせる
+  // ans は S から見た正解の手、say は理由
+  var TYPES = {
+    win:  {group:"koku", key:"勝つ",   pre:"これに ", suf:" 手は？", hint:"（ゲームの手をおさえる手）",
+           ans:function(s){return LOSE[s];}, say:function(s){return KOKU_SAY[LOSE[s]];}},
+    lose: {group:"koku", key:"負ける", pre:"これに ", suf:" 手は？", hint:"（ゲームの手におさえられる手）",
+           ans:function(s){return KOKU[s];}, say:function(s){return KOKU_SAY[s];}},
+    child:{group:"sei",  key:"生む",   pre:"これが ", suf:" 子は？", hint:"（ゲームの手から生まれる手）",
+           ans:function(s){return SEI[s];}, say:function(s){return SEI_SAY[s];}},
+    parent:{group:"sei", key:"生む",   pre:"これを ", suf:" 親は？", hint:"（ゲームの手を生み出す手）",
+           ans:function(s){return BORN[s];}, say:function(s){return SEI_SAY[BORN[s]];}}
+  };
+
+  var scope = "all";
+  function typeKeys(){
+    if(scope==="koku") return ["win","lose"];
+    if(scope==="sei")  return ["child","parent"];
+    return ["win","lose","child","parent"];
+  }
+
+  var score={c:0,t:0};
+  var cur=null, answered=false, lastKey="";
+
+  var gameDot=document.getElementById("gameDot");
+  var instrEl=document.getElementById("instr");
+  var handsEl=document.getElementById("hands");
+  var fb=document.getElementById("feedback");
+  var markEl=document.getElementById("mark");
+  var sayEl=document.getElementById("say");
+
+  // 手ボタン
+  ORDER.forEach(function(id){
+    var b=document.createElement("button");
+    b.className="hand "+id; b.dataset.id=id;
+    b.setAttribute("aria-label", E[id].k+"（"+E[id].y+"）");
+    b.innerHTML='<span class="hdot '+id+'">'+E[id].k+'</span><span class="yomi">'+E[id].y+'</span>';
+    b.addEventListener("click", function(){ answer(id); });
+    handsEl.appendChild(b);
+  });
+  var handBtns=[].slice.call(handsEl.querySelectorAll(".hand"));
+
+  function newQuestion(){
+    answered=false;
+    fb.classList.add("hide");
+    handBtns.forEach(function(b){ b.disabled=false; b.classList.remove("correct","wrong"); });
+
+    var keys=typeKeys();
+    var s, key, guard=0;
+    do{
+      s = ORDER[Math.floor(Math.random()*5)];
+      key = keys[Math.floor(Math.random()*keys.length)];
+      guard++;
+    }while((s+key)===lastKey && guard<20);
+    lastKey = s+key;
+
+    var t=TYPES[key];
+    cur={s:s, key:key, ans:t.ans(s), say:t.say(s)};
+
+    gameDot.className="dot "+s;
+    gameDot.textContent=E[s].k;
+    instrEl.innerHTML = t.pre+'<span class="key '+t.group+'">'+t.key+'</span>'+t.suf+
+                        '<span class="hint">'+t.hint+'</span>';
+  }
+
+  function answer(id){
+    if(answered) return;
+    answered=true;
+    score.t++;
+    var ok = (id===cur.ans);
+    if(ok) score.c++;
+    document.getElementById("sCorrect").textContent=score.c;
+    document.getElementById("sTotal").textContent=score.t;
+
+    handBtns.forEach(function(b){
+      b.disabled=true;
+      if(b.dataset.id===cur.ans) b.classList.add("correct");
+      else if(b.dataset.id===id) b.classList.add("wrong");
+    });
+
+    if(ok){
+      markEl.className="mark ok"; markEl.textContent="せいかい！";
+      sayEl.innerHTML='<span class="em">'+cur.say+'</span>';
+    }else{
+      markEl.className="mark ng"; markEl.textContent="ざんねん";
+      sayEl.innerHTML='こたえは '+E[cur.ans].k+'。<br><span class="em">'+cur.say+'</span>';
+    }
+    fb.classList.remove("hide");
+    document.getElementById("next").focus();
+  }
+
+  document.getElementById("next").addEventListener("click", function(){
+    newQuestion();
+    document.querySelector(".q").scrollIntoView({behavior:"smooth", block:"start"});
+  });
+
+  document.getElementById("reset").addEventListener("click", function(){
+    score={c:0,t:0};
+    document.getElementById("sCorrect").textContent="0";
+    document.getElementById("sTotal").textContent="0";
+    newQuestion();
+  });
+
+  // はんい切りかえ
+  function setScope(which){
+    scope=which;
+    document.getElementById("sc-koku").setAttribute("aria-pressed", which==="koku");
+    document.getElementById("sc-sei").setAttribute("aria-pressed",  which==="sei");
+    document.getElementById("sc-all").setAttribute("aria-pressed",  which==="all");
+    score={c:0,t:0};
+    document.getElementById("sCorrect").textContent="0";
+    document.getElementById("sTotal").textContent="0";
+    newQuestion();
+  }
+  document.getElementById("sc-koku").addEventListener("click", function(){ setScope("koku"); });
+  document.getElementById("sc-sei").addEventListener("click",  function(){ setScope("sei"); });
+  document.getElementById("sc-all").addEventListener("click",  function(){ setScope("all"); });
+
+  // expose for testing
+  window.__quiz = {get cur(){return cur;}, E:E};
+
+  newQuestion();
+})();
+</script>
+</body>
+</html>
