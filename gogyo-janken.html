@@ -245,8 +245,8 @@
     </div>
 
     <div class="card">
-      <h2>勝ち負け表<span class="tag koku">相剋</span></h2>
-      <p class="lead">それぞれの手が、何に勝って、何に負けるか。じゃんけんの勝ち負けは、これで決まります。</p>
+      <h2>つよい・よわい 表<span class="tag koku">相剋</span></h2>
+      <p class="lead">それぞれの手が、何に強くて、何に弱いか。</p>
       <ul class="rel-list" id="kokuList"></ul>
     </div>
   </section>
@@ -320,8 +320,8 @@
 
     var items = [
       {head:"相剋（つよい・よわい）", type:"koku"},
-      {type:"koku", badge:"負ける", tgt:lose,  say:KOKU_SAY[lose]},
-      {type:"koku", badge:"勝つ",   tgt:win,   say:KOKU_SAY[you]},
+      {type:"koku", badge:"弱い", tgt:lose,  say:KOKU_SAY[lose]},
+      {type:"koku", badge:"強い",   tgt:win,   say:KOKU_SAY[you]},
       {head:"相生（そだてる）", type:"sei"},
       {type:"sei",  badge:"生む",   tgt:child, say:SEI_SAY[you]},
       {type:"sei",  badge:"生まれる", tgt:parent, say:SEI_SAY[parent]}
@@ -376,12 +376,12 @@
       '<span class="mini '+id+'">'+E[id].k+'</span>'+
       '<div class="wl-body">'+
         '<div class="wl-row">'+
-          '<span class="wtag win">勝つ</span>'+
+          '<span class="wtag win">強い</span>'+
           '<span class="mini sm '+w+'">'+E[w].k+'</span>'+
           '<span class="wl-say">'+KOKU_SAY[id]+'</span>'+
         '</div>'+
         '<div class="wl-row">'+
-          '<span class="wtag lose">負ける</span>'+
+          '<span class="wtag lose">弱い</span>'+
           '<span class="mini sm '+l+'">'+E[l].k+'</span>'+
           '<span class="wl-say">'+KOKU_SAY[l]+'</span>'+
         '</div>'+
