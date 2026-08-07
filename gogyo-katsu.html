@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五行クイズ｜強いのはどれ？</title>
+<style>
+  :root{
+    --paper:#F5F1E6; --ink:#2b2b2b; --line:#d9cfb8;
+    --moku:#2E7D46; --ka:#D0433A; --do:#C8912B; --kin:#8A9199; --sui:#2A4B7C;
+    --sei:#2E7D46; --koku:#C0392B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'Hiragino Kaku Gothic ProN','Yu Gothic',Meiryo,sans-serif;
+    font-size:18px; line-height:1.7; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:16px 14px 40px;}
+  header{text-align:center;padding:6px 0 8px;}
+  header h1{margin:0;font-size:30px;letter-spacing:.06em;font-weight:800;}
+  header .sub{margin:4px 0 0;font-size:17px;color:#6b6252;}
+
+  .score{
+    display:flex;justify-content:center;align-items:baseline;gap:6px;
+    border:2px solid var(--line);border-radius:14px;background:#fff;
+    padding:8px 10px;margin:16px 0;font-weight:700;
+  }
+  .score .big{font-size:26px;color:var(--sei);font-weight:800;}
+  .score .l{font-size:16px;color:#6b6252;}
+  .score .reset{
+    margin-left:auto;border:2px solid var(--line);background:#fff;color:#6b6252;
+    font-size:14px;font-weight:700;border-radius:10px;padding:6px 12px;cursor:pointer;min-height:40px;
+  }
+  .score .reset:focus-visible{outline:3px solid #3a352b;outline-offset:2px;}
+
+  .q{
+    border:2px solid var(--line);border-radius:16px;background:#fff;
+    padding:18px 14px;text-align:center;margin-bottom:14px;
+  }
+  .q .who{font-size:17px;color:#6b6252;margin:0 0 8px;}
+  .dot{
+    width:96px;height:96px;border-radius:50%;color:#fff;font-size:52px;font-weight:800;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  .dot.moku{background:var(--moku);} .dot.ka{background:var(--ka);}
+  .dot.do{background:var(--do);} .dot.kin{background:var(--kin);} .dot.sui{background:var(--sui);}
+  .instr{font-size:26px;font-weight:800;margin:14px 0 0;}
+  .instr .key{color:var(--koku);font-size:32px;}
+  .instr .hint{display:block;font-size:15px;color:#6b6252;font-weight:400;margin-top:4px;}
+
+  .prompt{text-align:center;font-size:18px;font-weight:700;margin:2px 0 10px;color:#5a5142;}
+  .hands{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+  @media(max-width:480px){.hands{gap:6px;}}
+  .hand{
+    border:3px solid #fff;border-radius:16px;background:#fff;padding:12px 2px 10px;cursor:pointer;
+    min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    box-shadow:0 2px 0 rgba(0,0,0,.06);position:relative;
+  }
+  .hand:focus-visible{outline:3px solid #3a352b;outline-offset:2px;}
+  .hand .hdot{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;font-weight:800;}
+  @media(max-width:420px){.hand{min-height:92px;} .hand .hdot{width:44px;height:44px;font-size:26px;}}
+  .hand .yomi{font-size:14px;color:#6b6252;line-height:1;}
+  .hand.moku{border-color:var(--moku);} .hdot.moku{background:var(--moku);}
+  .hand.ka{border-color:var(--ka);}     .hdot.ka{background:var(--ka);}
+  .hand.do{border-color:var(--do);}     .hdot.do{background:var(--do);}
+  .hand.kin{border-color:var(--kin);}   .hdot.kin{background:var(--kin);}
+  .hand.sui{border-color:var(--sui);}   .hdot.sui{background:var(--sui);}
+  .hand[disabled]{cursor:default;opacity:.55;}
+  .hand.correct{border-color:var(--sei);box-shadow:0 0 0 3px var(--sei);opacity:1;}
+  .hand.correct::after{content:"○";position:absolute;top:2px;right:8px;color:var(--sei);font-size:26px;font-weight:800;}
+  .hand.wrong{border-color:var(--koku);box-shadow:0 0 0 3px var(--koku);opacity:1;}
+  .hand.wrong::after{content:"×";position:absolute;top:2px;right:8px;color:var(--koku);font-size:26px;font-weight:800;}
+
+  .feedback{
+    margin-top:14px;border:2px solid var(--line);border-radius:16px;background:#fff;
+    padding:16px 14px;text-align:center;
+  }
+  .feedback.hide{display:none;}
+  .mark{font-size:32px;font-weight:800;margin:0 0 8px;}
+  .mark.ok{color:var(--sei);}
+  .mark.ng{color:var(--koku);}
+  .say{font-size:20px;font-weight:700;margin:2px 0 0;}
+  .say .em{font-size:22px;}
+  .next{
+    margin-top:14px;border:none;border-radius:12px;background:#3a352b;color:#fff;
+    font-size:22px;font-weight:700;padding:15px 24px;cursor:pointer;min-height:58px;width:100%;
+  }
+  .next:focus-visible{outline:3px solid var(--do);outline-offset:2px;}
+
+  @media (prefers-reduced-motion: no-preference){
+    .feedback:not(.hide){animation:pop .26s ease;}
+    @keyframes pop{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>五行クイズ　強いのはどれ？</h1>
+    <p class="sub">ゲームの手に　強い　手を えらんでください</p>
+  </header>
+
+  <div class="score">
+    <span class="l">せいかい</span>
+    <span class="big" id="sCorrect">0</span>
+    <span class="l">／ <span id="sTotal">0</span> もん</span>
+    <button class="reset" id="reset">さいしょから</button>
+  </div>
+
+  <div class="q">
+    <p class="who">ゲームが出した手</p>
+    <span class="dot" id="gameDot"></span>
+    <p class="instr">これに <span class="key">強い</span> のは どれ？
+      <span class="hint">（この手を やっつける手）</span></p>
+  </div>
+
+  <p class="prompt">こたえの手を えらんでください</p>
+  <div class="hands" id="hands"></div>
+
+  <div class="feedback hide" id="feedback" aria-live="polite">
+    <p class="mark" id="mark"></p>
+    <p class="say" id="say"></p>
+    <button class="next" id="next">つぎの問題</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var E = {moku:{k:"木",y:"もく"}, ka:{k:"火",y:"か"}, do:{k:"土",y:"ど"}, kin:{k:"金",y:"きん"}, sui:{k:"水",y:"すい"}};
+  var ORDER = ["moku","ka","do","kin","sui"];
+
+  // KOKU[a] = a が勝つ(おさえる)相手
+  var KOKU = {moku:"do", do:"sui", sui:"ka", ka:"kin", kin:"moku"};
+  var KOKU_SAY = {
+    moku:"木は 土の養分をすう",
+    do:"土は 水をせきとめる",
+    sui:"水は 火をけす",
+    ka:"火は 金ぞくをとかす",
+    kin:"金（おの）は 木をきる"
+  };
+  // WIN[s] = s に勝つ手（s をおさえる手）
+  var WIN = {};
+  ORDER.forEach(function(a){ WIN[KOKU[a]] = a; });
+
+  var score={c:0,t:0}, cur=null, answered=false, lastS="";
+
+  var gameDot=document.getElementById("gameDot");
+  var handsEl=document.getElementById("hands");
+  var fb=document.getElementById("feedback");
+  var markEl=document.getElementById("mark");
+  var sayEl=document.getElementById("say");
+
+  ORDER.forEach(function(id){
+    var b=document.createElement("button");
+    b.className="hand "+id; b.dataset.id=id;
+    b.setAttribute("aria-label", E[id].k+"（"+E[id].y+"）");
+    b.innerHTML='<span class="hdot '+id+'">'+E[id].k+'</span><span class="yomi">'+E[id].y+'</span>';
+    b.addEventListener("click", function(){ answer(id); });
+    handsEl.appendChild(b);
+  });
+  var handBtns=[].slice.call(handsEl.querySelectorAll(".hand"));
+
+  function newQuestion(){
+    answered=false;
+    fb.classList.add("hide");
+    handBtns.forEach(function(b){ b.disabled=false; b.classList.remove("correct","wrong"); });
+
+    var s, guard=0;
+    do{ s=ORDER[Math.floor(Math.random()*5)]; guard++; }while(s===lastS && guard<10);
+    lastS=s;
+
+    cur={s:s, ans:WIN[s], say:KOKU_SAY[WIN[s]]};
+    gameDot.className="dot "+s;
+    gameDot.textContent=E[s].k;
+  }
+
+  function answer(id){
+    if(answered) return;
+    answered=true;
+    score.t++;
+    var ok=(id===cur.ans);
+    if(ok) score.c++;
+    document.getElementById("sCorrect").textContent=score.c;
+    document.getElementById("sTotal").textContent=score.t;
+
+    handBtns.forEach(function(b){
+      b.disabled=true;
+      if(b.dataset.id===cur.ans) b.classList.add("correct");
+      else if(b.dataset.id===id) b.classList.add("wrong");
+    });
+
+    if(ok){
+      markEl.className="mark ok"; markEl.textContent="せいかい！";
+      sayEl.innerHTML='<span class="em">'+cur.say+'</span>';
+    }else{
+      markEl.className="mark ng"; markEl.textContent="ざんねん";
+      sayEl.innerHTML='こたえは '+E[cur.ans].k+'。<br><span class="em">'+cur.say+'</span>';
+    }
+    fb.classList.remove("hide");
+    document.getElementById("next").focus();
+  }
+
+  document.getElementById("next").addEventListener("click", function(){
+    newQuestion();
+    document.querySelector(".q").scrollIntoView({behavior:"smooth", block:"start"});
+  });
+  document.getElementById("reset").addEventListener("click", function(){
+    score={c:0,t:0};
+    document.getElementById("sCorrect").textContent="0";
+    document.getElementById("sTotal").textContent="0";
+    newQuestion();
+  });
+
+  window.__quiz={get cur(){return cur;}, E:E};
+  newQuestion();
+})();
+</script>
+</body>
+</html>
