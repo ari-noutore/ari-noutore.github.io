@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部首の名前クイズ（60問バンク）</title>
+<style>
+  :root{
+    --paper:#F4F2EB; --card:#FFFFFF; --ink:#1E3A5F; --ink-soft:#3A5A7D;
+    --text:#2A2A26; --line:#D8D3C6; --chip:#E7EDF4;
+    --ok:#2E7D5B; --ok-bg:#E5F2EB; --ng:#B23B33; --ng-bg:#F6E7E5;
+    --gothic:"Hiragino Kaku Gothic ProN","ヒラギノ角ゴ ProN","Yu Gothic","游ゴシック",Meiryo,sans-serif;
+    --mincho:"Hiragino Mincho ProN","ヒラギノ明朝 ProN","Yu Mincho","游明朝",serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--text);font-family:var(--gothic);
+    -webkit-text-size-adjust:100%;line-height:1.5;}
+  .wrap{max-width:560px;margin:0 auto;padding:16px 16px 40px;}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:6px 2px 14px;}
+  header h1{font-size:21px;margin:0;color:var(--ink);font-weight:700;letter-spacing:.02em;}
+  .count{font-size:17px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .bar{height:8px;background:#E6E2D6;border-radius:99px;overflow:hidden;margin:0 2px 18px;}
+  .bar > i{display:block;height:100%;width:0;background:var(--ink);border-radius:99px;transition:width .35s ease;}
+  @media (prefers-reduced-motion:reduce){.bar>i{transition:none;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:22px 18px 26px;box-shadow:0 2px 10px rgba(30,58,95,.06);text-align:center;}
+  .chip{display:inline-block;background:var(--chip);color:var(--ink);font-size:17px;
+    font-weight:700;padding:5px 16px;border-radius:99px;}
+  .radical{font-family:var(--mincho);font-size:124px;line-height:1.05;color:var(--ink);
+    margin:6px 0 2px;font-weight:600;}
+  .example{font-family:var(--mincho);font-size:26px;color:#43423D;margin:2px 0 4px;}
+  .example .lbl{font-family:var(--gothic);font-size:17px;color:#7A776C;margin-right:8px;}
+  .ask{font-size:20px;color:var(--text);margin-top:14px;font-weight:700;}
+  .opts{margin-top:16px;display:flex;flex-direction:column;gap:12px;}
+  button.opt{font-family:var(--gothic);font-size:24px;font-weight:700;min-height:66px;
+    padding:12px 16px;background:#fff;color:var(--text);border:2px solid var(--line);
+    border-radius:14px;cursor:pointer;width:100%;display:flex;align-items:center;
+    justify-content:center;gap:10px;transition:border-color .12s ease, background .12s ease;}
+  button.opt:hover{border-color:var(--ink-soft);}
+  button.opt:focus-visible{outline:3px solid var(--ink);outline-offset:2px;}
+  button.opt:disabled{cursor:default;}
+  .opt.correct{background:var(--ok-bg);border-color:var(--ok);color:#1c5a41;}
+  .opt.wrong{background:var(--ng-bg);border-color:var(--ng);color:#8f2e28;}
+  .mark{font-size:26px;line-height:1;}
+  .opt.correct .mark{color:var(--ok);}
+  .opt.wrong .mark{color:var(--ng);}
+  .foot{margin-top:18px;min-height:56px;text-align:center;}
+  .msg{font-size:20px;font-weight:700;margin-bottom:12px;}
+  .msg.ok{color:var(--ok);}
+  .msg.ng{color:var(--ng);}
+  .note{font-size:17px;color:#5c5a52;font-weight:400;margin-top:2px;}
+  .next{font-family:var(--gothic);font-size:22px;font-weight:700;background:var(--ink);
+    color:#fff;border:none;border-radius:14px;min-height:60px;padding:12px 34px;cursor:pointer;}
+  .next:focus-visible{outline:3px solid var(--ink-soft);outline-offset:3px;}
+  .result{text-align:center;padding:30px 18px 34px;}
+  .result .score{font-family:var(--mincho);font-size:60px;color:var(--ink);line-height:1.1;margin:8px 0;}
+  .result .score small{font-size:26px;color:#7A776C;}
+  .result .rmsg{font-size:22px;font-weight:700;margin:6px 0 8px;color:var(--text);}
+  .result .sub{font-size:16px;color:#6b685f;margin-bottom:22px;}
+  .result .again{font-family:var(--gothic);font-size:22px;font-weight:700;background:var(--ink);
+    color:#fff;border:none;border-radius:14px;min-height:60px;padding:12px 40px;cursor:pointer;}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>部首の名前クイズ</h1>
+    <div class="count" id="count">1 / 20</div>
+  </header>
+  <div class="bar"><i id="bar"></i></div>
+
+  <div id="quiz">
+    <div class="card">
+      <span class="chip" id="chip">へん</span>
+      <div class="radical" id="radical">氵</div>
+      <div class="example"><span class="lbl">れい</span><span id="example">海・池・泳</span></div>
+      <div class="ask">この部首の名前は？</div>
+    </div>
+    <div class="opts" id="opts"></div>
+    <div class="foot">
+      <div class="msg hidden" id="msg"></div>
+      <button class="next hidden" id="next">つぎへ ▶</button>
+    </div>
+  </div>
+
+  <div id="result" class="card result hidden">
+    <div class="chip">おつかれさまでした</div>
+    <div class="score"><span id="rscore">0</span><small> / <span id="rtotal">20</span> もん</small></div>
+    <div class="rmsg" id="rmsg"></div>
+    <div class="sub" id="rsub"></div>
+    <button class="again" id="again">もう一度（別の問題）</button>
+  </div>
+</div>
+
+<script>
+// 60問バンク：へん・つくり・かんむり・あし
+const DATA = [
+  // 【へん（左がわ）】
+  {b:"氵", g:"へん", ex:"海・池・泳", name:"さんずい"},
+  {b:"木", g:"へん", ex:"林・板・柱", name:"きへん"},
+  {b:"亻", g:"へん", ex:"休・体・住", name:"にんべん"},
+  {b:"扌", g:"へん", ex:"持・打・投", name:"てへん"},
+  {b:"糸", g:"へん", ex:"紙・線・組", name:"いとへん"},
+  {b:"言", g:"へん", ex:"話・読・記", name:"ごんべん"},
+  {b:"金", g:"へん", ex:"鉄・銀・針", name:"かねへん"},
+  {b:"口", g:"へん", ex:"味・呼・鳴", name:"くちへん"},
+  {b:"女", g:"へん", ex:"姉・妹・好", name:"おんなへん"},
+  {b:"土", g:"へん", ex:"地・場・坂", name:"つちへん"},
+  {b:"日", g:"へん", ex:"時・晴・昨", name:"ひへん"},
+  {b:"火", g:"へん", ex:"灯・焼・煙", name:"ひへん"},
+  {b:"月", g:"へん", ex:"胸・腹・肝", name:"にくづき"},
+  {b:"目", g:"へん", ex:"眠・眼", name:"めへん"},
+  {b:"石", g:"へん", ex:"破・砂", name:"いしへん"},
+  {b:"王", g:"へん", ex:"理・球・現", name:"おうへん"},
+  {b:"米", g:"へん", ex:"粉・粒・精", name:"こめへん"},
+  {b:"車", g:"へん", ex:"転・軽・輪", name:"くるまへん"},
+  {b:"足", g:"へん", ex:"路・踏・跳", name:"あしへん"},
+  {b:"忄", g:"へん", ex:"快・性・情", name:"りっしんべん"},
+  {b:"禾", g:"へん", ex:"秋・科・種", name:"のぎへん"},
+  {b:"阝", g:"へん（左）", ex:"陽・階・防", name:"こざとへん"},
+  {b:"礻", g:"へん", ex:"神・社・福", name:"しめすへん"},
+  {b:"舟", g:"へん", ex:"船・航", name:"ふねへん"},
+  {b:"食", g:"へん", ex:"飯・飲・館", name:"しょくへん"},
+  {b:"牛", g:"へん", ex:"物・特・牧", name:"うしへん"},
+  {b:"弓", g:"へん", ex:"引・弱・強", name:"ゆみへん"},
+  {b:"方", g:"へん", ex:"旅・族・旗", name:"ほうへん"},
+  {b:"虫", g:"へん", ex:"虹・蚊", name:"むしへん"},
+  {b:"酉", g:"へん", ex:"酒・配・酢", name:"とりへん"},
+  {b:"衤", g:"へん", ex:"初・複・補", name:"ころもへん"},
+  // 【つくり（右がわ）】
+  {b:"刂", g:"つくり", ex:"利・別・列", name:"りっとう"},
+  {b:"頁", g:"つくり", ex:"顔・頭・題", name:"おおがい"},
+  {b:"阝", g:"つくり（右）", ex:"都・部・郡", name:"おおざと"},
+  {b:"攵", g:"つくり", ex:"教・数・放", name:"のぶん"},
+  {b:"隹", g:"つくり", ex:"集・雑・難", name:"ふるとり"},
+  {b:"彡", g:"つくり", ex:"形・彩・影", name:"さんづくり"},
+  {b:"力", g:"つくり", ex:"助・動・勝", name:"ちから"},
+  {b:"斤", g:"つくり", ex:"新・断", name:"おのづくり"},
+  {b:"欠", g:"つくり", ex:"歌・欲・次", name:"あくび"},
+  {b:"戈", g:"つくり", ex:"成・我", name:"ほこづくり"},
+  {b:"寸", g:"つくり", ex:"対・射・討", name:"すん"},
+  {b:"殳", g:"つくり", ex:"殺・段", name:"るまた"},
+  {b:"見", g:"つくり", ex:"親・観・覚", name:"みる"},
+  // 【かんむり（上）】
+  {b:"宀", g:"かんむり", ex:"家・室・宿", name:"うかんむり"},
+  {b:"艹", g:"かんむり", ex:"花・草・葉", name:"くさかんむり"},
+  {b:"竹", g:"かんむり", ex:"筆・答・箱", name:"たけかんむり"},
+  {b:"雨", g:"かんむり", ex:"雪・雲・電", name:"あめかんむり"},
+  {b:"冖", g:"かんむり", ex:"写・軍・冠", name:"わかんむり"},
+  {b:"穴", g:"かんむり", ex:"空・究・窓", name:"あなかんむり"},
+  {b:"亠", g:"かんむり", ex:"京・交・夜", name:"なべぶた"},
+  {b:"罒", g:"かんむり", ex:"置・罪", name:"あみがしら"},
+  {b:"爫", g:"かんむり", ex:"愛・受", name:"つめかんむり"},
+  {b:"耂", g:"かんむり", ex:"老・考・者", name:"おいかんむり"},
+  {b:"⺌", g:"かんむり", ex:"学・常・営", name:"しょうかんむり"},
+  // 【あし（下）】
+  {b:"心", g:"あし", ex:"思・急・悲", name:"こころ"},
+  {b:"灬", g:"あし", ex:"点・熱・照", name:"れっか"},
+  {b:"儿", g:"あし", ex:"元・兄・光", name:"ひとあし"},
+  {b:"皿", g:"あし", ex:"益・盛・盤", name:"さら"},
+  {b:"貝", g:"あし", ex:"買・貧・貴", name:"かい"},
+];
+
+const UNIQUE_NAMES = [...new Set(DATA.map(d => d.name))];
+const ROUND = 20; // 1回の出題数（60問からランダムに）
+
+function shuffle(a){
+  a = a.slice();
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+let order = [], idx = 0, score = 0, answered = false;
+const el = id => document.getElementById(id);
+
+function makeOptions(item){
+  const wrong = shuffle(UNIQUE_NAMES.filter(n => n !== item.name)).slice(0,3);
+  return shuffle([item.name, ...wrong]);
+}
+
+function render(){
+  answered = false;
+  const item = DATA[order[idx]];
+  el("count").textContent = (idx+1) + " / " + ROUND;
+  el("bar").style.width = (idx/ROUND*100) + "%";
+  el("chip").textContent = item.g;
+  el("radical").textContent = item.b;
+  el("example").textContent = item.ex;
+  el("msg").className = "msg hidden";
+  el("next").className = "next hidden";
+  const opts = el("opts");
+  opts.innerHTML = "";
+  makeOptions(item).forEach(name => {
+    const btn = document.createElement("button");
+    btn.className = "opt"; btn.type = "button"; btn.textContent = name;
+    btn.addEventListener("click", () => choose(btn, name, item));
+    opts.appendChild(btn);
+  });
+}
+
+function choose(btn, name, item){
+  if(answered) return;
+  answered = true;
+  const buttons = [...document.querySelectorAll(".opt")];
+  buttons.forEach(b => b.disabled = true);
+  const correct = name === item.name;
+  if(correct) score++;
+  buttons.forEach(b => {
+    if(b.textContent === item.name){
+      b.classList.add("correct");
+      b.insertAdjacentHTML("afterbegin", '<span class="mark">○</span>');
+    } else if(b === btn){
+      b.classList.add("wrong");
+      b.insertAdjacentHTML("afterbegin", '<span class="mark">×</span>');
+    }
+  });
+  const msg = el("msg");
+  if(correct){ msg.className = "msg ok"; msg.textContent = "せいかい！"; }
+  else {
+    msg.className = "msg ng";
+    msg.innerHTML = 'こたえは「' + item.name + '」<div class="note">' + item.b + ' … ' + item.g + '</div>';
+  }
+  el("bar").style.width = ((idx+1)/ROUND*100) + "%";
+  const next = el("next");
+  next.textContent = (idx+1 < ROUND) ? "つぎへ ▶" : "けっかを見る ▶";
+  next.className = "next"; next.focus();
+}
+
+function nextQ(){
+  idx++;
+  if(idx >= ROUND){ showResult(); return; }
+  render();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function showResult(){
+  el("quiz").classList.add("hidden");
+  const r = el("result"); r.classList.remove("hidden");
+  el("rscore").textContent = score;
+  el("rtotal").textContent = ROUND;
+  el("count").textContent = ROUND + " / " + ROUND;
+  el("bar").style.width = "100%";
+  const pct = score / ROUND;
+  let m;
+  if(pct === 1) m = "全問せいかい！ おみごとです。";
+  else if(pct >= 0.8) m = "すばらしい出来ばえです。";
+  else if(pct >= 0.5) m = "その調子。くり返すと覚えられます。";
+  else m = "はじめは上出来。もう一度やってみましょう。";
+  el("rmsg").textContent = m;
+  el("rsub").textContent = "問題は全60問の中から毎回ランダムに出ます。";
+}
+
+function start(){
+  order = shuffle([...Array(DATA.length).keys()]).slice(0, ROUND);
+  idx = 0; score = 0;
+  el("result").classList.add("hidden");
+  el("quiz").classList.remove("hidden");
+  render();
+  window.scrollTo({top:0});
+}
+
+el("next").addEventListener("click", nextQ);
+el("again").addEventListener("click", start);
+start();
+</script>
+</body>
+</html>
