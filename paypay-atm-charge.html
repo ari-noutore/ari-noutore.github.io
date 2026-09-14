@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>セブン銀行ATMで 現金チャージ（れんしゅう）</title>
+<style>
+  :root{
+    --paper:#FBF6EE;      /* 低グレアの背景 */
+    --card:#FFFFFF;
+    --ink:#241F1A;        /* 濃い文字色 */
+    --ink-soft:#5C544B;
+    --pp:#E4002B;         /* スマホ（PayPay）＝赤 */
+    --pp-dark:#B3001F;
+    --atm:#0E7C86;        /* ATM＝ティール */
+    --atm-dark:#0A5A62;
+    --amber:#F59E0B;      /* 「いま押す」ハイライト */
+    --go:#2E7D32;         /* 成功・完了 */
+    --line:#E4DCCE;
+    --dim:0.32;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP","Meiryo",sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    font-size:18px;
+    line-height:1.6;
+    -webkit-text-size-adjust:100%;
+  }
+  #app{max-width:520px;margin:0 auto;min-height:100vh;padding:14px 14px 28px;}
+
+  /* ===== 共通ボタン ===== */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:.4em;
+    border:none;border-radius:16px;cursor:pointer;
+    font-family:inherit;font-weight:800;line-height:1.3;
+    padding:18px 22px;font-size:21px;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--go);color:#fff;box-shadow:0 4px 0 #205222;}
+  .btn-primary:active{box-shadow:0 2px 0 #205222;}
+  .btn-plain{background:#EFE7D8;color:var(--ink);}
+  .btn-plain:disabled{opacity:.4;cursor:default;}
+
+  /* ===== スタート画面 ===== */
+  .start-hero{
+    text-align:center;padding:22px 16px 26px;border-radius:22px;
+    background:linear-gradient(160deg,#fff, #FDF3E6);
+    border:2px solid var(--line);
+  }
+  .start-hero .emoji{font-size:52px;line-height:1;}
+  .start-hero h1{font-size:26px;margin:12px 4px 4px;letter-spacing:.02em;}
+  .start-hero .lead{font-size:18px;color:var(--ink-soft);margin:0;}
+  .prep{margin:18px 0;padding:0;list-style:none;}
+  .prep li{
+    display:flex;align-items:center;gap:14px;
+    background:var(--card);border:2px solid var(--line);border-radius:16px;
+    padding:14px 16px;font-size:20px;font-weight:700;margin-bottom:10px;
+  }
+  .prep .ic{font-size:30px;}
+  .points{
+    background:#FFF7E8;border:2px solid #F3E2BE;border-radius:16px;
+    padding:14px 16px 14px;font-size:17px;color:#6b5a2a;margin-bottom:22px;
+  }
+  .points b{color:#8a6d18;}
+  .center{text-align:center;}
+  .fullbtn{width:100%;font-size:24px;padding:22px;}
+  .note-real{font-size:14px;color:var(--ink-soft);text-align:center;margin-top:14px;line-height:1.5;}
+
+  /* ===== 進み具合 ===== */
+  #header{margin-bottom:12px;}
+  .steplabel{font-size:16px;font-weight:800;color:var(--ink-soft);text-align:center;margin-bottom:6px;}
+  .steplabel b{color:var(--atm-dark);font-size:19px;}
+  .pbar{height:12px;background:#EBE2D2;border-radius:99px;overflow:hidden;}
+  .pbar > i{display:block;height:100%;background:var(--go);border-radius:99px;transition:width .35s ease;}
+
+  /* ===== いま押す 案内 ===== */
+  .now{
+    display:flex;align-items:center;gap:12px;
+    background:var(--card);border:2px solid var(--line);border-radius:18px;
+    padding:14px 16px;margin:12px 0;
+  }
+  .now .tag{
+    flex:0 0 auto;border-radius:14px;color:#fff;font-weight:900;
+    padding:10px 12px;font-size:17px;text-align:center;min-width:92px;line-height:1.25;
+  }
+  .now .tag .em{display:block;font-size:26px;}
+  .now.phone .tag{background:var(--pp);}
+  .now.atm .tag{background:var(--atm);}
+  .now .msg{font-size:20px;font-weight:800;line-height:1.45;}
+
+  /* ===== 端末カード（スマホ・ATM）===== */
+  .device{
+    border-radius:22px;overflow:hidden;border:3px solid transparent;
+    margin-bottom:16px;transition:opacity .25s, border-color .25s, box-shadow .25s;
+    background:var(--card);
+  }
+  .device.inactive{opacity:var(--dim);filter:grayscale(.4);}
+  .device.active{border-color:var(--amber);box-shadow:0 0 0 4px rgba(245,158,11,.22);}
+  .dev-head{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 14px;color:#fff;font-weight:900;font-size:18px;
+  }
+  .device.phone .dev-head{background:var(--pp);}
+  .device.atm  .dev-head{background:var(--atm);}
+  .dev-head .badge{
+    background:rgba(255,255,255,.22);border-radius:8px;padding:3px 10px;font-size:15px;font-weight:800;
+  }
+  .screen{padding:16px;min-height:190px;display:flex;flex-direction:column;justify-content:center;}
+
+  /* スマホ画面の中身 */
+  .pp-logo{display:inline-block;background:var(--pp);color:#fff;font-weight:900;
+    border-radius:10px;padding:6px 14px;font-size:22px;letter-spacing:.02em;}
+  .pp-balance{font-size:16px;color:var(--ink-soft);margin-top:12px;}
+  .pp-balance b{font-size:24px;color:var(--ink);}
+  .plus-btn{
+    width:96px;height:96px;border-radius:50%;background:var(--pp);color:#fff;
+    font-size:52px;font-weight:900;border:none;margin:14px auto 6px;display:block;line-height:1;
+  }
+  .plus-btn + span{display:block;text-align:center;font-weight:800;font-size:18px;color:var(--pp-dark);}
+  .menu-row{
+    display:flex;align-items:center;gap:12px;width:100%;
+    background:#F7F1E6;border:2px solid var(--line);border-radius:14px;
+    padding:16px 16px;font-size:20px;font-weight:800;margin:6px 0;text-align:left;color:var(--ink);
+  }
+  .menu-row .mi{font-size:26px;}
+  .cameraview{
+    background:#111;border-radius:14px;padding:18px;color:#fff;text-align:center;
+  }
+  .cameraview .frame{
+    border:3px dashed rgba(255,255,255,.7);border-radius:12px;padding:16px;margin:0 auto 12px;max-width:200px;
+  }
+  .qr{width:120px;height:120px;margin:0 auto;image-rendering:pixelated;display:block;}
+  .bignum{
+    font-size:56px;font-weight:900;letter-spacing:.18em;color:var(--pp-dark);text-align:center;
+    background:#FFF1F3;border:2px dashed var(--pp);border-radius:16px;padding:14px;margin:6px 0 4px;
+  }
+  .caption{text-align:center;font-size:17px;color:var(--ink-soft);font-weight:700;}
+
+  /* ATM画面の中身 */
+  .atm-screen{background:#F0FAFA;border:2px solid #BEE3E5;border-radius:14px;padding:16px;}
+  .atm-title{font-size:18px;font-weight:900;color:var(--atm-dark);text-align:center;margin:0 0 12px;}
+  .atm-btn{
+    display:block;width:100%;background:#fff;border:2px solid var(--atm);color:var(--atm-dark);
+    border-radius:14px;padding:18px;font-size:21px;font-weight:900;margin:8px 0;line-height:1.35;
+  }
+  .qr-on-atm{width:130px;height:130px;margin:6px auto;display:block;border:6px solid #fff;image-rendering:pixelated;}
+
+  /* キーパッド */
+  .digits{display:flex;justify-content:center;gap:10px;margin:4px 0 14px;}
+  .digit-box{
+    width:52px;height:64px;border-radius:12px;border:3px solid var(--atm);
+    display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;
+    background:#fff;color:var(--atm-dark);
+  }
+  .digit-box.filled{background:#E6F6F6;}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto;}
+  .key{
+    background:#fff;border:2px solid var(--atm);color:var(--atm-dark);border-radius:14px;
+    padding:16px 0;font-size:26px;font-weight:900;
+  }
+  .key:active{background:#E6F6F6;}
+  .shake{animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+  /* お札 */
+  .bills{display:flex;flex-direction:column;gap:10px;margin:4px 0 12px;}
+  .bill{
+    display:flex;align-items:center;justify-content:space-between;
+    border:none;border-radius:12px;padding:16px 18px;font-size:22px;font-weight:900;color:#3a2f10;
+  }
+  .bill .amt{font-size:24px;}
+  .bill.b1000{background:#EAF3EA;border:2px solid #B7D6B7;}
+  .bill.b5000{background:#F1EAF6;border:2px solid #CDB7DC;}
+  .bill.b10000{background:#F6EFE7;border:2px solid #DCC6A9;}
+  .total-box{
+    background:#fff;border:3px solid var(--atm);border-radius:14px;text-align:center;
+    padding:12px;margin:8px 0 10px;
+  }
+  .total-box .t-label{font-size:16px;color:var(--ink-soft);font-weight:800;}
+  .total-box .t-amt{font-size:40px;font-weight:900;color:var(--atm-dark);line-height:1.1;}
+
+  .slot-anim{height:14px;background:#0A5A62;border-radius:6px;max-width:180px;margin:10px auto;}
+
+  /* 完了 */
+  .done-card{background:#F0FAF0;border:2px solid #BFE3BF;border-radius:14px;padding:18px;text-align:center;}
+  .done-card .big{font-size:26px;font-weight:900;color:var(--go);}
+  .done-balance{font-size:18px;color:var(--ink-soft);margin-top:8px;}
+  .done-balance b{font-size:30px;color:var(--ink);}
+
+  /* 目立たせる（いま押す対象）*/
+  .pulse{position:relative;animation:pulse 1.25s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(245,158,11,.55);}
+    70%{box-shadow:0 0 0 16px rgba(245,158,11,0);}
+    100%{box-shadow:0 0 0 0 rgba(245,158,11,0);}
+  }
+  .tap-hint{text-align:center;font-size:17px;font-weight:800;color:var(--amber);margin-top:4px;min-height:1.4em;}
+
+  /* 下部の操作 */
+  #controls{display:flex;gap:10px;margin-top:6px;}
+  #controls .btn{flex:1;font-size:18px;padding:15px;}
+
+  /* 完了画面 */
+  #doneScreen .cel{text-align:center;padding:16px 8px 6px;}
+  #doneScreen .cel .emoji{font-size:60px;}
+  #doneScreen .cel h2{font-size:28px;margin:8px 0 4px;color:var(--go);}
+  #doneScreen .cel p{font-size:19px;color:var(--ink-soft);margin:0;}
+  .recap{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:16px 16px 8px;margin:18px 0;}
+  .recap h3{font-size:19px;margin:0 0 10px;text-align:center;}
+  .recap ol{margin:0;padding-left:1.4em;}
+  .recap li{font-size:17px;font-weight:700;margin-bottom:8px;line-height:1.5;}
+  .recap li .who{
+    display:inline-block;color:#fff;border-radius:7px;font-size:13px;font-weight:900;
+    padding:1px 8px;margin-right:6px;vertical-align:2px;
+  }
+  .recap li .w-atm{background:var(--atm);}
+  .recap li .w-phone{background:var(--pp);}
+
+  .hidden{display:none !important;}
+
+  @media (max-width:360px){
+    body{font-size:17px;}
+    .now .msg{font-size:18px;}
+    .digit-box{width:46px;height:58px;font-size:30px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .pulse{animation:none;box-shadow:0 0 0 4px rgba(245,158,11,.5);}
+    .pbar>i{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== スタート画面 ===== -->
+  <section id="startScreen">
+    <div class="start-hero">
+      <div class="emoji">🏧📱</div>
+      <h1>セブン銀行ATMで<br>現金チャージ</h1>
+      <p class="lead">お札を入れて、PayPayにお金を足す練習</p>
+    </div>
+
+    <ul class="prep">
+      <li><span class="ic">📱</span><span>スマホ（PayPayアプリ）</span></li>
+      <li><span class="ic">💴</span><span>お札（紙幣）</span></li>
+    </ul>
+
+    <div class="points">
+      ・<b>お札だけ</b>使えます（小銭は使えません）<br>
+      ・手数料は<b>無料</b>です<br>
+      ・銀行の口座は<b>いりません</b>
+    </div>
+
+    <button class="btn btn-primary fullbtn" id="startBtn">はじめる</button>
+    <p class="note-real">※これは練習用の画面です。本物のPayPayやATMではありません。</p>
+  </section>
+
+  <!-- ===== 練習画面 ===== -->
+  <section id="playScreen" class="hidden">
+    <div id="header">
+      <div class="steplabel">ステップ <b id="stepNum">1</b> / 8</div>
+      <div class="pbar"><i id="pbarFill" style="width:12%"></i></div>
+    </div>
+
+    <div class="now" id="nowBar">
+      <div class="tag"><span class="em" id="nowEm">🏧</span><span id="nowWho">ATM</span></div>
+      <div class="msg" id="nowMsg">案内</div>
+    </div>
+
+    <!-- スマホ -->
+    <div class="device phone" id="devPhone">
+      <div class="dev-head"><span>📱</span><span>スマホ</span><span class="badge">PayPay</span></div>
+      <div class="screen" id="phoneScreen"></div>
+    </div>
+
+    <!-- ATM -->
+    <div class="device atm" id="devAtm">
+      <div class="dev-head"><span>🏧</span><span>セブン銀行ATM</span></div>
+      <div class="screen" id="atmScreen"></div>
+    </div>
+
+    <div class="tap-hint" id="tapHint"></div>
+
+    <div id="controls">
+      <button class="btn btn-plain" id="backBtn">← 1つもどる</button>
+      <button class="btn btn-plain" id="restartBtn">はじめから</button>
+    </div>
+  </section>
+
+  <!-- ===== 完了画面 ===== -->
+  <section id="doneScreen" class="hidden">
+    <div class="cel">
+      <div class="emoji">🎉</div>
+      <h2>チャージ完了！</h2>
+      <p>おつかれさまでした。上手にできましたね。</p>
+    </div>
+
+    <div class="done-card">
+      <div class="big">PayPayにお金が入りました</div>
+      <div class="done-balance">いまの残高　<b id="finalBalance">0円</b></div>
+    </div>
+
+    <div class="recap">
+      <h3>今日の手順（8ステップ）</h3>
+      <ol>
+        <li><span class="who w-atm">ATM</span>「スマートフォンでの取引」を押す</li>
+        <li><span class="who w-phone">スマホ</span>PayPayを開いて「＋」を押す</li>
+        <li><span class="who w-phone">スマホ</span>「ATMチャージ」を選ぶ</li>
+        <li><span class="who w-phone">スマホ</span>カメラでATMのQRコードを読み取る</li>
+        <li><span class="who w-atm">ATM</span>スマホに出た番号「8439」を入力する</li>
+        <li><span class="who w-atm">ATM</span>お札を入れる</li>
+        <li><span class="who w-atm">ATM</span>金額を確かめて「確認」を押す</li>
+        <li><span class="who w-atm">ATM</span>チャージ完了！</li>
+      </ol>
+    </div>
+
+    <button class="btn btn-primary fullbtn" id="againBtn">もう一度 練習する</button>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var TOTAL_STEPS = 8;
+  var COMPANY_NO = "8439";
+  var state = { step:1, entered:"", total:0 };
+
+  var el = function(id){ return document.getElementById(id); };
+  var startScreen = el("startScreen"),
+      playScreen  = el("playScreen"),
+      doneScreen  = el("doneScreen"),
+      phoneScreen = el("phoneScreen"),
+      atmScreen   = el("atmScreen"),
+      devPhone    = el("devPhone"),
+      devAtm      = el("devAtm"),
+      nowBar      = el("nowBar"),
+      nowEm       = el("nowEm"),
+      nowWho      = el("nowWho"),
+      nowMsg      = el("nowMsg"),
+      tapHint     = el("tapHint");
+
+  // かんたんQRコード風の絵（見た目だけ・本物ではありません）
+  function qrSVG(size){
+    var n=13, cell=size/n, rects="";
+    var seed=12345;
+    function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return ((seed>>16)&255) < 132 ? 1 : 0; }
+    // 3隅のファインダーパターン（7×7の目印）を置く関数
+    function finder(gx,gy){
+      for(var y=0;y<7;y++){for(var x=0;x<7;x++){
+        var edge=(x===0||x===6||y===0||y===6);
+        var mid=(x>=2&&x<=4&&y>=2&&y<=4);
+        if(edge||mid){ rects+='<rect x="'+((gx+x)*cell)+'" y="'+((gy+y)*cell)+'" width="'+cell+'" height="'+cell+'"/>'; }
+      }}
+    }
+    function inFinder(x,y){
+      return (x<8&&y<8) || (x>n-9&&y<8) || (x<8&&y>n-9);
+    }
+    // ランダム模様（目印の場所は避ける）
+    for(var y=0;y<n;y++){for(var x=0;x<n;x++){
+      if(inFinder(x,y)) continue;
+      if(rnd()){ rects+='<rect x="'+(x*cell)+'" y="'+(y*cell)+'" width="'+cell+'" height="'+cell+'"/>'; }
+    }}
+    finder(0,0); finder(n-7,0); finder(0,n-7);
+    return '<svg class="qr" viewBox="0 0 '+size+' '+size+'" xmlns="http://www.w3.org/2000/svg">'
+         + '<rect width="'+size+'" height="'+size+'" fill="#fff"/><g fill="#111">'+rects+'</g></svg>';
+  }
+  function qrOnAtm(){
+    return qrSVG(130).replace('class="qr"','class="qr-on-atm"');
+  }
+
+  function yen(n){ return n.toLocaleString("ja-JP") + "円"; }
+
+  // どの端末が「いま押す」かを設定
+  function setActive(which, msg){
+    if(which==="phone"){
+      devPhone.className="device phone active";
+      devAtm.className="device atm inactive";
+      nowBar.className="now phone";
+      nowEm.textContent="📱"; nowWho.textContent="スマホ";
+    }else{
+      devAtm.className="device atm active";
+      devPhone.className="device phone inactive";
+      nowBar.className="now atm";
+      nowEm.textContent="🏧"; nowWho.textContent="ATM";
+    }
+    nowMsg.textContent=msg;
+  }
+
+  function setHeader(){
+    el("stepNum").textContent = state.step;
+    el("pbarFill").style.width = (state.step/TOTAL_STEPS*100) + "%";
+  }
+
+  function go(n){ state.step=n; render(); }
+  function next(){ if(state.step>=TOTAL_STEPS){ finish(); } else { go(state.step+1); } }
+
+  // ==== 各ステップの描画 ====
+  function render(){
+    setHeader();
+    tapHint.textContent="";
+    el("backBtn").disabled = (state.step<=1);
+    phoneScreen.innerHTML=""; atmScreen.innerHTML="";
+
+    switch(state.step){
+      case 1: renderStep1(); break;
+      case 2: renderStep2(); break;
+      case 3: renderStep3(); break;
+      case 4: renderStep4(); break;
+      case 5: renderStep5(); break;
+      case 6: renderStep6(); break;
+      case 7: renderStep7(); break;
+      case 8: renderStep8(); break;
+    }
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+
+  // 1) ATM：スマートフォンでの取引
+  function renderStep1(){
+    setActive("atm","ATMの画面で「スマートフォンでの取引」を押します");
+    phoneScreen.innerHTML='<div class="center"><span class="pp-logo">PayPay</span>'
+      +'<div class="pp-balance">残高　<b>'+yen(state.total)+'</b></div>'
+      +'<div class="caption" style="margin-top:14px">まずはATMを操作します</div></div>';
+    atmScreen.innerHTML='<div class="atm-screen"><p class="atm-title">いらっしゃいませ</p>'
+      +'<button class="atm-btn pulse" id="t1">スマートフォンでの取引</button>'
+      +'<button class="atm-btn" style="opacity:.5">引き出し</button>'
+      +'<button class="atm-btn" style="opacity:.5">預け入れ</button></div>';
+    el("t1").onclick=next;
+    tapHint.textContent="↑ 黄色く光っているところを押してね";
+  }
+
+  // 2) スマホ：＋（チャージ）
+  function renderStep2(){
+    setActive("phone","スマホでPayPayを開いて「＋」を押します");
+    phoneScreen.innerHTML='<div class="center"><span class="pp-logo">PayPay</span>'
+      +'<div class="pp-balance">残高　<b>'+yen(state.total)+'</b></div>'
+      +'<button class="plus-btn pulse" id="t2">＋</button><span>チャージ</span></div>';
+    atmScreen.innerHTML='<div class="atm-screen"><p class="atm-title">QRコードを準備しています…</p>'
+      +'<p class="caption">つぎはスマホを操作します</p></div>';
+    el("t2").onclick=next;
+    tapHint.textContent="↑ 赤い「＋」を押してね";
+  }
+
+  // 3) スマホ：ATMチャージを選ぶ
+  function renderStep3(){
+    setActive("phone","「ATMチャージ」を選びます");
+    phoneScreen.innerHTML='<div><p class="atm-title" style="color:var(--pp-dark)">チャージ方法をえらぶ</p>'
+      +'<button class="menu-row pulse" id="t3"><span class="mi">🏧</span>ATMチャージ</button>'
+      +'<div class="menu-row" style="opacity:.5"><span class="mi">🏦</span>銀行口座</div>'
+      +'<div class="menu-row" style="opacity:.5"><span class="mi">💳</span>クレジットカード</div></div>';
+    atmScreen.innerHTML='<div class="atm-screen"><p class="atm-title">QRコードを準備しています…</p></div>';
+    el("t3").onclick=next;
+    tapHint.textContent="↑ 「ATMチャージ」を押してね";
+  }
+
+  // 4) スマホ：カメラでATMのQRを読み取る
+  function renderStep4(){
+    setActive("phone","スマホのカメラで、ATMのQRコードを読み取ります");
+    phoneScreen.innerHTML='<div class="cameraview"><div class="frame">'+qrSVG(110)+'</div>'
+      +'<button class="btn btn-primary pulse" id="t4" style="font-size:20px;padding:14px 20px;">読み取る</button></div>';
+    atmScreen.innerHTML='<div class="atm-screen"><p class="atm-title">このQRコードを読み取ってください</p>'
+      + qrOnAtm() +'</div>';
+    el("t4").onclick=next;
+    tapHint.textContent="↑ 「読み取る」を押してね";
+  }
+
+  // 5) ATM：番号8439を入力
+  function renderStep5(){
+    setActive("atm","スマホに出た番号「8439」を、ATMに入力します");
+    state.entered="";
+    phoneScreen.innerHTML='<div class="center"><p class="caption" style="color:var(--pp-dark)">この番号をATMに入力してね</p>'
+      +'<div class="bignum">8439</div></div>';
+    drawKeypad();
+    tapHint.textContent="↑ 8 → 4 → 3 → 9 の順に押してね";
+  }
+  function drawKeypad(){
+    var boxes="";
+    for(var i=0;i<4;i++){
+      var ch = state.entered[i] || "";
+      boxes+='<div class="digit-box'+(ch?' filled':'')+'">'+ch+'</div>';
+    }
+    var keys="";
+    var order=[1,2,3,4,5,6,7,8,9,null,0,null];
+    for(var k=0;k<order.length;k++){
+      if(order[k]===null){ keys+='<span></span>'; }
+      else{ keys+='<button class="key" data-d="'+order[k]+'">'+order[k]+'</button>'; }
+    }
+    var done = state.entered===COMPANY_NO;
+    atmScreen.innerHTML='<div class="atm-screen"><p class="atm-title">番号を入力してください</p>'
+      +'<div class="digits" id="digits">'+boxes+'</div>'
+      +'<div class="keypad">'+keys+'</div>'
+      + (done ? '<button class="atm-btn pulse" id="t5ok" style="margin-top:14px;background:var(--go);color:#fff;border-color:var(--go)">確認</button>' : '')
+      +'</div>';
+    var btns=atmScreen.querySelectorAll(".key");
+    for(var b=0;b<btns.length;b++){ btns[b].onclick=onDigit; }
+    if(done){ el("t5ok").onclick=next; tapHint.textContent="↑ 「確認」を押してね"; }
+  }
+  function onDigit(e){
+    if(state.entered.length>=4) return;
+    var d=e.currentTarget.getAttribute("data-d");
+    var expected=COMPANY_NO[state.entered.length];
+    if(d===expected){
+      state.entered+=d;
+      drawKeypad();
+    }else{
+      var box=el("digits");
+      if(box){ box.classList.remove("shake"); void box.offsetWidth; box.classList.add("shake"); }
+      tapHint.textContent="つぎは「"+expected+"」を押してね";
+    }
+  }
+
+  // 6) ATM：お札を入れる
+  function renderStep6(){
+    setActive("atm","チャージする分のお札を、ATMに入れます");
+    state.total=0;
+    phoneScreen.innerHTML='<div class="center"><span class="pp-logo">PayPay</span>'
+      +'<div class="caption" style="margin-top:14px">ATMにお札を入れてください</div></div>';
+    drawBills();
+    tapHint.textContent="↑ 入れたいお札を押してね（何枚でもOK）";
+  }
+  function drawBills(){
+    atmScreen.innerHTML='<div class="atm-screen"><p class="atm-title">お札を入れてください</p>'
+      +'<div class="total-box"><div class="t-label">入った金額</div><div class="t-amt" id="billTotal">'+yen(state.total)+'</div></div>'
+      +'<div class="bills">'
+      +'<button class="bill b1000" data-v="1000"><span>千円札</span><span class="amt">＋1,000円</span></button>'
+      +'<button class="bill b5000" data-v="5000"><span>五千円札</span><span class="amt">＋5,000円</span></button>'
+      +'<button class="bill b10000" data-v="10000"><span>一万円札</span><span class="amt">＋10,000円</span></button>'
+      +'</div>'
+      +'<button class="btn btn-primary" id="billDone" style="width:100%;'+(state.total>0?'':'opacity:.4')+'"'+(state.total>0?'':' disabled')+'>入れ終わった</button>'
+      +'</div>';
+    var bl=atmScreen.querySelectorAll(".bill");
+    for(var i=0;i<bl.length;i++){ bl[i].onclick=onBill; }
+    var bd=el("billDone");
+    if(state.total>0){ bd.classList.add("pulse"); bd.onclick=next; }
+  }
+  function onBill(e){
+    state.total += parseInt(e.currentTarget.getAttribute("data-v"),10);
+    drawBills();
+    tapHint.textContent="いま "+yen(state.total)+" 入りました";
+  }
+
+  // 7) ATM：確認
+  function renderStep7(){
+    setActive("atm","金額を確かめて「確認」を押します");
+    phoneScreen.innerHTML='<div class="center"><span class="pp-logo">PayPay</span>'
+      +'<div class="caption" style="margin-top:14px">もうすぐ完了です</div></div>';
+    atmScreen.innerHTML='<div class="atm-screen"><p class="atm-title">この金額をチャージします</p>'
+      +'<div class="total-box"><div class="t-label">チャージ金額</div><div class="t-amt">'+yen(state.total)+'</div></div>'
+      +'<button class="atm-btn pulse" id="t7" style="background:var(--go);color:#fff;border-color:var(--go)">確認</button>'
+      +'<div class="slot-anim"></div></div>';
+    el("t7").onclick=next;
+    tapHint.textContent="↑ 金額があっていたら「確認」を押してね";
+  }
+
+  // 8) 完了
+  function renderStep8(){ finish(); }
+
+  function finish(){
+    el("stepNum").textContent = 8;
+    el("pbarFill").style.width="100%";
+    el("finalBalance").textContent = yen(state.total);
+    playScreen.classList.add("hidden");
+    doneScreen.classList.remove("hidden");
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function startPlay(){
+    state.step=1; state.entered=""; state.total=0;
+    startScreen.classList.add("hidden");
+    doneScreen.classList.add("hidden");
+    playScreen.classList.remove("hidden");
+    render();
+  }
+
+  el("startBtn").onclick=startPlay;
+  el("againBtn").onclick=startPlay;
+  el("restartBtn").onclick=startPlay;
+  el("backBtn").onclick=function(){ if(state.step>1){ go(state.step-1); } };
+})();
+</script>
+</body>
+</html>
