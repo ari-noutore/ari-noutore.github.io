@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>古典文様クイズ</title>
+<style>
+:root{--ink:#2b2b3a;--indigo:#1f3a68;--ai:#3d5a8c;--beni:#b5403a;--ivory:#fbf7ee;--card:#fffdf8;--line:#d8cfbd;--ok:#2e7d4f;--okbg:#e3f2e8;--ng:#b5403a;--ngbg:#f8e3e1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;font-size:20px;line-height:1.6}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+h1{color:var(--indigo);font-size:32px;margin:8px 0 4px;letter-spacing:.08em;border-bottom:3px double var(--indigo);padding-bottom:6px}
+.sum{font-size:19px;margin:6px 0 16px}
+h2{font-size:23px;color:var(--indigo);margin:22px 0 10px}
+.seg{display:inline-flex;border:2px solid var(--indigo);border-radius:12px;overflow:hidden;margin:0 10px 10px 0}
+.seg button{font:inherit;font-size:20px;padding:10px 18px;border:0;background:var(--card);color:var(--indigo);cursor:pointer}
+.seg button.on{background:var(--indigo);color:#fff}
+.tile{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--ivory)}
+.tile svg{display:block;width:100%;height:auto}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px}
+.choice{font:inherit;font-size:26px;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:18px 12px;min-height:64px;color:var(--ink);cursor:pointer;width:100%}
+.choice.pic{padding:8px}
+.choice.ans{background:var(--okbg);border-color:var(--ok)}
+.choice.wrong{background:var(--ngbg);border-color:var(--ng)}
+.big{font-size:22px}
+.res{font-weight:700;font-size:24px}
+.btn{font:inherit;font-size:21px;padding:12px 26px;border-radius:12px;border:2px solid var(--indigo);background:var(--card);color:var(--indigo);cursor:pointer;margin-top:14px}
+.btn.primary{background:var(--indigo);color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}h1{font-size:28px}.choice{font-size:24px}}
+.memo{font-size:19px;color:#555}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>古典文様クイズ</h1>
+<p class="sum">図柄を見て名前を当てる、または名前から図柄を選ぶクイズです。図鑑で全部の文様と意味も見られます。</p>
+<h2>モード</h2>
+<div id="modes"></div>
+<div id="main"></div>
+<h2>メモ</h2>
+<p class="memo">クイズの問題の順番と選択肢は、毎回入れかわります。</p>
+</div>
+<script>
+"use strict";
+const W=200,H=120,S3=Math.sqrt(3);
+const C={fg:"#1f3a68",fg2:"#b5403a",line:"#2b2b3a",bg:"#fbf7ee"};
+const range=(a,b)=>{const r=[];for(let i=a;i<=b;i++)r.push(i);return r;};
+const seg=(x1,y1,x2,y2,c,w=1.6)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c.line}" stroke-width="${w}" stroke-linecap="round"/>`;
+function normalLine(nx,ny,d,c){const px=nx*d,py=ny*d,tx=-ny,ty=nx,L=400;return seg(px-tx*L,py-ty*L,px+tx*L,py+ty*L,c,2);}
+const J=a=>a.join("");
+const PATS=[
+{id:"ichimatsu",name:"市松",yomi:"いちまつ",mean:"途切れず続く柄から、繁栄が広がっていく縁起の良い文様。江戸の役者・佐野川市松の袴の柄が名の由来。",
+ draw:c=>J(range(0,9).flatMap(i=>range(0,5).map(j=>(i+j)%2===0?`<rect x="${i*20}" y="${j*20}" width="20" height="20" fill="${c.fg}"/>`:"")))},
+{id:"seigaiha",name:"青海波",yomi:"せいがいは",mean:"穏やかな波がどこまでも続くように、平和な暮らしが続くことを願う文様。",
+ draw:c=>J(range(0,13).flatMap(j=>range(-1,6).map(i=>{const cx=i*40+(j%2?20:0),cy=j*10;return J([20,15,10,5].map(r=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${r===20?c.bg:"none"}" stroke="${c.fg}" stroke-width="1.8"/>`));})))},
+{id:"matsukawabishi",name:"松皮菱",yomi:"まつかわびし",mean:"大きな菱の上下に小さな菱を重ねた形。松の皮がはがれた様子に見立てた文様で、松にちなみ長寿を願う。",
+ draw:c=>J(range(-1,5).flatMap(i=>range(-1,4).map(j=>{const cx=i*48+(Math.abs(j)%2?24:0),cy=j*36;const dia=(y,w,h)=>`${cx},${y-h} ${cx+w},${y} ${cx},${y+h} ${cx-w},${y}`;return `<g fill="none" stroke="${c.line}" stroke-width="1.8"><polygon points="${dia(cy,24,12)}"/><polygon points="${dia(cy-12,12,7)}"/><polygon points="${dia(cy+12,12,7)}"/></g>`;})))},
+{id:"shippo",name:"七宝",yomi:"しっぽう",mean:"円がどこまでもつながる形から、円満や人との良いご縁が続くことを願う文様。",
+ draw:c=>J(range(0,5).flatMap(i=>range(0,3).map(j=>`<circle cx="${i*50}" cy="${j*50+10}" r="${25*Math.SQRT2}" fill="none" stroke="${c.fg}" stroke-width="2.6"/>`)))},
+{id:"asanoha",name:"麻の葉",yomi:"あさのは",mean:"麻のようにまっすぐ丈夫に育つよう、子どもの成長を願う文様。産着によく使われた。",
+ draw:c=>{const s=30,h=s*S3/2;const pt=(i,j)=>[i*s+(Math.abs(j)%2?s/2:0),j*h];const out=[];
+  range(-1,5).forEach(j=>range(-1,8).forEach(i=>{const tris=Math.abs(j)%2===0?[[pt(i,j),pt(i+1,j),pt(i,j+1)],[pt(i+1,j),pt(i,j+1),pt(i+1,j+1)]]:[[pt(i,j),pt(i+1,j),pt(i+1,j+1)],[pt(i,j),pt(i,j+1),pt(i+1,j+1)]];
+  tris.forEach(t=>{const gx=(t[0][0]+t[1][0]+t[2][0])/3,gy=(t[0][1]+t[1][1]+t[2][1])/3;t.forEach((p,pi)=>{const q=t[(pi+1)%3];out.push(seg(p[0],p[1],q[0],q[1],c));out.push(seg(p[0],p[1],gx,gy,c));});});}));return J(out);}},
+{id:"kikko",name:"亀甲",yomi:"きっこう",mean:"亀の甲羅の六角形。「亀は万年」にちなみ、長寿を願うおめでたい文様。",
+ draw:c=>{const r=16,w=r*S3;const hex=(cx,cy,rr)=>range(0,5).map(k=>{const a=Math.PI/180*(60*k-90);return `${cx+rr*Math.cos(a)},${cy+rr*Math.sin(a)}`;}).join(" ");
+  return J(range(-1,6).flatMap(j=>range(-1,8).map(i=>{const cx=i*w+(Math.abs(j)%2?w/2:0),cy=j*r*1.5;return `<polygon points="${hex(cx,cy,r)}" fill="none" stroke="${c.fg}" stroke-width="2.2"/><polygon points="${hex(cx,cy,r*0.62)}" fill="none" stroke="${c.fg}" stroke-width="1.4"/>`;})));}},
+{id:"yagasuri",name:"矢絣",yomi:"やがすり",mean:"矢羽根の形。放った矢は戻らないことから、嫁ぐ娘が出戻らないようにと婚礼の着物に使われた。",
+ draw:c=>J(range(0,9).flatMap(i=>range(-1,6).map(j=>{const x=i*22,y=j*24+(i%2?12:0);const f=j%2===0?c.fg:c.fg2;return `<polygon points="${x},${y} ${x+11},${y+8} ${x+11},${y+24} ${x},${y+16}" fill="${f}"/><polygon points="${x+22},${y} ${x+11},${y+8} ${x+11},${y+24} ${x+22},${y+16}" fill="${f}" opacity="0.75"/>`;})))},
+{id:"uroko",name:"鱗",yomi:"うろこ",mean:"三角形を並べた魚や蛇のうろこの形。厄よけ・魔よけの力があるとされた。",
+ draw:c=>J(range(0,5).flatMap(j=>range(0,9).map(i=>{const x=i*24,y=j*24;return `<polygon points="${x},${y+24} ${x+12},${y} ${x+24},${y+24}" fill="${c.fg}"/>`;})))},
+{id:"hishi",name:"菱",yomi:"ひし",mean:"水草のヒシの葉の形とされる、ひし形の文様。繁殖力の強さから子孫繁栄を願う。",
+ draw:c=>J(range(-1,9).flatMap(i=>range(-1,5).map(j=>{const cx=i*28+(Math.abs(j)%2?14:0),cy=j*24;return `<polygon points="${cx},${cy-12} ${cx+14},${cy} ${cx},${cy+12} ${cx-14},${cy}" fill="none" stroke="${c.fg}" stroke-width="1.6"/><polygon points="${cx},${cy-6} ${cx+7},${cy} ${cx},${cy+6} ${cx-7},${cy}" fill="${c.fg}"/>`;})))},
+{id:"tatewaku",name:"立涌",yomi:"たてわく",mean:"湯気や雲が立ちのぼる様子を表した波線の文様。運気が上がるよう願う、格式の高い柄。",
+ draw:c=>`<rect x="0" y="0" width="${W}" height="${H}" fill="${c.fg}"/>`+J(range(-1,11).map(k=>{const pts=range(0,70).map(s=>{const y=s*2-10;return `${k*20+(k%2===0?1:-1)*8.5*Math.cos((y/40)*2*Math.PI)},${y}`;}).join(" ");return `<polyline points="${pts}" fill="none" stroke="${c.bg}" stroke-width="3.2"/>`;}))},
+{id:"kagome",name:"籠目",yomi:"かごめ",mean:"竹かごの編み目の形。六芒星のような網目に魔よけの力があるとされた。",
+ draw:c=>{const d=26,out=[];range(-12,12).forEach(k=>{out.push(normalLine(0,1,k*d,c));out.push(normalLine(S3/2,-0.5,k*d,c));out.push(normalLine(S3/2,0.5,k*d+d/2,c));});return J(out);}},
+{id:"karakusa",name:"唐草",yomi:"からくさ",mean:"つるが四方へのびていく植物の文様。長寿や一家の繁栄を願う。風呂敷の柄でおなじみ。",
+ draw:c=>J(range(0,3).flatMap(j=>range(-1,4).map(i=>{const x=i*60+(j%2?30:0),y=j*40+20;return `<g fill="none" stroke="${c.fg}" stroke-width="2.4" stroke-linecap="round"><path d="M${x} ${y} C${x+10} ${y-18} ${x+20} ${y-18} ${x+30} ${y} C${x+40} ${y+18} ${x+50} ${y+18} ${x+60} ${y}"/><path d="M${x+15} ${y-13} c-2 -10 12 -12 12 -3 c0 6 -8 6 -7 1"/><path d="M${x+45} ${y+13} c2 10 -12 12 -12 3 c0 -6 8 -6 7 -1"/></g>`;})))},
+{id:"chidori",name:"千鳥",yomi:"ちどり",mean:"波の上を群れて飛ぶ千鳥の姿。「千取り」に通じ、目標を勝ち取る縁起柄とされた。",
+ draw:c=>J(range(0,3).flatMap(j=>range(-1,5).map(i=>{const x=i*48+(j%2?24:0),y=j*40+8;return `<path transform="translate(${x} ${y})" d="M2 16 C2 8 10 6 14 10 C16 2 24 0 30 4 C26 6 24 9 25 12 C28 12 31 13 33 15 C29 16 27 17 26 18 C24 25 14 27 8 23 C5 21 3 19 2 16 Z" fill="${c.fg}"/>`;})))},
+{id:"ajiro",name:"網代",yomi:"あじろ",mean:"竹やひのきの薄板を互い違いに編んだ形。暮らしの道具から生まれた、素朴で丈夫さを表す文様。",
+ draw:c=>J(range(0,9).flatMap(i=>range(0,5).map(j=>{const x=i*24,y=j*24,horiz=(i+j)%2===0;return J([6,12,18].map(o=>horiz?seg(x+2,y+o,x+22,y+o,c,2.2):seg(x+o,y+2,x+o,y+22,c,2.2)));})))},
+];
+const tile=p=>`<div class="tile"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="文様"><rect x="0" y="0" width="${W}" height="${H}" fill="${C.bg}"/>${p.draw(C)}</svg></div>`;
+function shuffle(a){const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+const idx=()=>PATS.map((_,i)=>i);
+const makeChoices=t=>shuffle([t,...shuffle(idx().filter(i=>i!==t)).slice(0,3)]);
+function newRound(){const order=shuffle(idx());return{order,choices:order.map(makeChoices)};}
+const N=PATS.length;
+const S={view:"quiz",mode:"p2n",round:newRound(),qi:0,score:0,picked:null};
+function restart(){S.round=newRound();S.qi=0;S.score=0;S.picked=null;render();}
+function segHtml(opts,val,act){return `<div class="seg">${opts.map(([v,l])=>`<button class="${v===val?"on":""}" data-act="${act}" data-v="${v}">${l}</button>`).join("")}</div>`;}
+function render(){
+ document.getElementById("modes").innerHTML=segHtml([["quiz","クイズ"],["zukan","図鑑"]],S.view,"view")+(S.view==="quiz"?segHtml([["p2n","図柄→名前"],["n2p","名前→図柄"]],S.mode,"mode"):"");
+ let h="";
+ if(S.view==="quiz"){
+  if(S.qi<N){
+   const t=S.round.order[S.qi],tp=PATS[t],pk=S.picked;
+   h+=`<h2>第${S.qi+1}問（全${N}問）　得点 ${S.score}</h2>`;
+   h+=S.mode==="p2n"?`<div>この文様の名前はどれでしょう？</div><div style="margin-top:12px">${tile(tp)}</div>`:`<div class="big">「${tp.name}」はどの図柄でしょう？</div>`;
+   h+=`<div class="choices">`+S.round.choices[S.qi].map(i=>{let cl="choice"+(S.mode==="n2p"?" pic":"");if(pk!==null&&i===t)cl+=" ans";else if(pk===i)cl+=" wrong";return `<button class="${cl}" data-act="pick" data-v="${i}" aria-label="選択肢">${S.mode==="p2n"?PATS[i].name:tile(PATS[i])}</button>`;}).join("")+`</div>`;
+   if(pk!==null){const ok=pk===t;h+=`<div style="margin-top:18px"><div class="res" style="color:${ok?"var(--ok)":"var(--ng)"}">${ok?"正解！":"ざんねん"}</div><div class="big">${tp.name}（${tp.yomi}）</div><div>${tp.mean}</div><button class="btn primary" data-act="next">${S.qi+1<N?"次の問題へ":"結果を見る"}</button></div>`;}
+   h+=`<h2>やり直す</h2><button class="btn" data-act="restart">もう一度（最初から）</button>`;
+  }else{
+   const s=S.score;
+   h+=`<h2>結果</h2><div style="font-size:30px">${N}問中 ${s}問 正解</div><div>${s===N?"全問正解、おみごとです！":s>=N*0.7?"よくできました！":"図鑑で見直して、もう一度挑戦してみましょう。"}</div><button class="btn primary" data-act="restart">もう一度</button>`;
+  }
+ }else{
+  h+=`<h2>文様図鑑（全${N}種）</h2><div class="grid">`+PATS.map(p=>`<div>${tile(p)}<div class="big" style="margin-top:8px">${p.name}（${p.yomi}）</div><div>${p.mean}</div></div>`).join("")+`</div>`;
+ }
+ document.getElementById("main").innerHTML=h;
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act,v=b.dataset.v;
+ if(a==="view"){S.view=v;render();}
+ else if(a==="mode"){S.mode=v;restart();}
+ else if(a==="pick"){if(S.picked!==null)return;const i=+v;S.picked=i;if(i===S.round.order[S.qi])S.score++;render();}
+ else if(a==="next"){S.picked=null;S.qi++;render();window.scrollTo(0,0);}
+ else if(a==="restart")restart();});
+render();
+</script>
+</body>
+</html>
